@@ -25,12 +25,20 @@ type StatusFilter = 'all' | 'active' | 'suspended';
 
 const PAGE_SIZE = 20;
 
-export function UsersSection({ refreshKey, onOpenUser }: { refreshKey: number; onOpenUser: (id: string) => void }) {
+export function UsersSection({
+  refreshKey,
+  onOpenUser,
+  initialQuery = '',
+}: {
+  refreshKey: number;
+  onOpenUser: (id: string) => void;
+  initialQuery?: string;
+}) {
   const { token } = useAuth();
   const [role, setRole] = useState<RoleFilter>('ALL');
   const [status, setStatus] = useState<StatusFilter>('all');
-  const [query, setQuery] = useState('');
-  const [debounced, setDebounced] = useState('');
+  const [query, setQuery] = useState(initialQuery);
+  const [debounced, setDebounced] = useState(initialQuery.trim());
   const [page, setPage] = useState(1);
   const [data, setData] = useState<{ total: number; users: AdminUser[] } | null>(null);
   const [loading, setLoading] = useState(true);

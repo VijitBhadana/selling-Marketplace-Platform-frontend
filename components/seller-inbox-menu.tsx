@@ -7,6 +7,7 @@ import { useChat } from '@/lib/chat-context';
 import { api, ApiError } from '@/lib/api';
 import { withImageParams } from '@/lib/image-utils';
 import { ListRowsSkeleton } from './skeleton';
+import { navBadgeClass, navIconButtonClass } from './nav-icon-button';
 
 // A conversation is about either a shop (listing) or, in Jobs & Freelancing, a job.
 type Conversation = {
@@ -110,13 +111,11 @@ export const SellerInboxMenu = memo(function SellerInboxMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-label="Buyer messages"
         aria-expanded={open}
-        className={`relative flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
-          open ? 'border-brand bg-brand-soft text-brand' : 'border-border text-ink-muted hover:border-brand hover:bg-brand-soft hover:text-brand'
-        }`}
+        className={navIconButtonClass(open)}
       >
         <MessageCircle size={17} />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-none text-white">
+          <span className={`${navBadgeClass} bg-accent text-white`}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

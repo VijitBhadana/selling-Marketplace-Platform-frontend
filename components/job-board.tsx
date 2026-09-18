@@ -201,6 +201,7 @@ export function JobBoard({
   initialJobs,
   initialTotal,
   postJobHref,
+  near,
 }: {
   cloudeSlug: string;
   /** Omit to show jobs from every category in the Cloude. */
@@ -209,6 +210,8 @@ export function JobBoard({
   initialJobs: Job[];
   initialTotal: number;
   postJobHref: string;
+  /** The visitor's area from the navbar location picker — filtered jobs stay near them too. */
+  near?: Record<string, string | undefined>;
 }) {
   const { byJob, markApplied } = useMyJobApplications();
   const [query, setQuery] = useState('');
@@ -250,6 +253,7 @@ export function JobBoard({
         jobType: jobType || undefined,
         workMode: workMode || undefined,
         pageSize: PAGE_SIZE,
+        ...near,
       })
       .then((data) => {
         if (cancelled) return;
@@ -265,7 +269,7 @@ export function JobBoard({
     return () => {
       cancelled = true;
     };
-  }, [filtersActive, cloudeSlug, categorySlug, debouncedQuery, sort, postedWithin, jobType, workMode, initialJobs, initialTotal]);
+  }, [filtersActive, cloudeSlug, categorySlug, debouncedQuery, sort, postedWithin, jobType, workMode, initialJobs, initialTotal, near]);
 
   function clearFilters() {
     setQuery('');

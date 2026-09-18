@@ -955,7 +955,7 @@ export function FinanceDetailsModal({
                 <button
                   type="button"
                   onClick={onAction}
-                  className="flex-[2] rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink shadow-[0_8px_20px_-10px_rgb(var(--brand)/0.9)] transition-opacity hover:opacity-90"
+                  className="flex-[2] rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink shadow-[0_8px_20px_-10px_rgb(var(--brand)/calc(0.9*var(--glow)))] transition-opacity hover:opacity-90"
                 >
                   {actionLabel}
                 </button>

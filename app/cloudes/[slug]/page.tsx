@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Users } from 'lucide-react';
+import { ArrowLeft, MapPin, Users } from 'lucide-react';
 import { cloudes, getCloudeBySlug, slugify, type Cloude, type CloudeCategory } from '@/lib/cloudes-data';
 import { sampleListings } from '@/lib/sample-listings';
 import { ListingCard } from '@/components/listing-card';
@@ -12,6 +12,8 @@ import { JobBoard } from '@/components/job-board';
 import type { Job } from '@/lib/jobs';
 import { JsonLd } from '@/components/json-ld';
 import { api } from '@/lib/api';
+import { nearParams } from '@/lib/user-location';
+import { getUserLocation } from '@/lib/user-location-server';
 import { FALLBACK_LISTING_IMAGE } from '@/lib/image-utils';
 import { breadcrumbJsonLd, ogImageUrl, pageMetadata, type JsonLdNode } from '@/lib/seo';
 import { absoluteUrl } from '@/lib/site';
@@ -96,9 +98,16 @@ export default async function CloudePage({ params, searchParams }: Props) {
     const isJobBoard = !!cloude.jobBoard;
     // Financing also carries job posts, listed under its shops instead of replacing them.
     const alsoJobs = !isJobBoard && !!cloude.jobPosts;
+    // Only what's in the visitor's area (navbar location picker — their city, its
+    // sub-areas and ~25 km around); everything when they haven't set one.
+    const location = getUserLocation();
+    const city = location?.city;
+    const near = nearParams(location);
     const dbJobs =
       isJobBoard || alsoJobs
-        ? await api.jobs.list({ cloudeSlug: cloude.slug, categorySlug: activeCategory?.slug, pageSize: 48 }).catch(() => null)
+        ? await api.jobs
+            .list({ cloudeSlug: cloude.slug, categorySlug: activeCategory?.slug, pageSize: 48, ...near })
+            .catch(() => null)
         : null;
     const jobs: Job[] = dbJobs?.items ?? [];
 
@@ -107,7 +116,7 @@ export default async function CloudePage({ params, searchParams }: Props) {
     const dbListings = isJobBoard
       ? null
       : await api.listings
-          .list({ cloudeSlug: cloude.slug, categorySlug: activeCategory?.slug, pageSize: activeCategory ? 24 : 48 })
+          .list({ cloudeSlug: cloude.slug, categorySlug: activeCategory?.slug, pageSize: activeCategory ? 24 : 48, ...near })
           .catch(() => null);
 
     const dbItems: StaticShopCardItem[] = (dbListings?.items ?? []).map((l: any) => ({
@@ -120,8 +129,9 @@ export default async function CloudePage({ params, searchParams }: Props) {
       isNew: Date.now() - new Date(l.createdAt).getTime() < 24 * 60 * 60 * 1000,
     }));
 
-    // Static demo listings — only shown as filler when nothing real exists yet.
-    const staticItems: StaticShopCardItem[] = listings
+    // Static demo listings — only shown as filler when nothing real exists yet, and never
+    // once the visitor picked a location (they'd be shops from somewhere else).
+    const staticItems: StaticShopCardItem[] = (city ? [] : listings)
       .filter((l) => !activeCategory || slugify(l.category) === activeCategory.slug)
       .map((l) => ({
         id: l.id,
@@ -224,9 +234,19 @@ export default async function CloudePage({ params, searchParams }: Props) {
                 initialJobs={jobs}
                 initialTotal={dbJobs?.total ?? 0}
                 postJobHref={postAdHref}
+                near={near}
               />
             ) : (
               <>
+                {city && (
+                  <p className="mb-4 flex items-center gap-1.5 text-sm text-ink-muted">
+                    <MapPin size={14} className="shrink-0 text-brand" />
+                    <span>
+                      Showing shops in and around <span className="font-semibold text-ink">{city}</span> — change it from the
+                      search bar.
+                    </span>
+                  </p>
+                )}
                 <CategoryShopGrid
                   cloudeSlug={cloude.slug}
                   categorySlug={activeCategory?.slug}
@@ -263,6 +283,7 @@ export default async function CloudePage({ params, searchParams }: Props) {
                       initialJobs={jobs}
                       initialTotal={dbJobs?.total ?? 0}
                       postJobHref={postJobHref}
+                      near={near}
                     />
                   </section>
                 )}
@@ -277,8 +298,9 @@ export default async function CloudePage({ params, searchParams }: Props) {
   if (activeCategory) {
     // Real, backend-saved listings — the shared source every visitor sees,
     // regardless of who posted them or which browser they're in.
+    const location = getUserLocation();
     const dbListings = await api.listings
-      .list({ cloudeSlug: cloude.slug, categorySlug: activeCategory.slug, pageSize: 24 })
+      .list({ cloudeSlug: cloude.slug, categorySlug: activeCategory.slug, pageSize: 24, ...nearParams(location) })
       .catch(() => null);
 
     const dbItems: StaticShopCardItem[] = (dbListings?.items ?? []).map((l: any) => ({

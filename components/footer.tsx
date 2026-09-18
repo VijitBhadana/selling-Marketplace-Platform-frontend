@@ -18,7 +18,7 @@ export function Footer() {
     <footer className="border-t border-border bg-surface">
       {/* CTA strip */}
       <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
-        <div className="relative isolate flex flex-col items-start justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-brand/90 p-6 text-brand-ink shadow-[0_4px_14px_-8px_rgb(var(--brand)/0.35)] sm:flex-row sm:items-center sm:p-8">
+        <div className="relative isolate flex flex-col items-start justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-brand/90 p-6 text-brand-ink shadow-[0_4px_14px_-8px_rgb(var(--brand)/calc(0.35*var(--glow)))] sm:flex-row sm:items-center sm:p-8">
           <div
             aria-hidden
             className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/5 blur-2xl"
@@ -44,7 +44,7 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 sm:col-span-4 lg:col-span-3">
             <div className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand/70 text-brand-ink shadow-[0_4px_14px_-4px_rgb(var(--brand)/0.6)]">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand/70 text-brand-ink shadow-[0_4px_14px_-4px_rgb(var(--brand)/calc(0.6*var(--glow)))]">
                 <Cloud size={17} strokeWidth={2.4} />
               </span>
               DukanCloude

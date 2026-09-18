@@ -9,7 +9,7 @@ export function ScrollReveal({
   className = '',
 }: {
   children: ReactNode;
-  direction?: 'left' | 'right';
+  direction?: 'left' | 'right' | 'up';
   delay?: number;
   className?: string;
 }) {
@@ -38,7 +38,13 @@ export function ScrollReveal({
     <div
       ref={ref}
       className={`transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
-        visible ? 'translate-x-0 opacity-100' : direction === 'left' ? '-translate-x-16 opacity-0' : 'translate-x-16 opacity-0'
+        visible
+          ? 'translate-x-0 translate-y-0 opacity-100'
+          : direction === 'left'
+            ? '-translate-x-16 opacity-0'
+            : direction === 'right'
+              ? 'translate-x-16 opacity-0'
+              : 'translate-y-8 opacity-0'
       } ${className}`}
       style={{ transitionDelay: visible ? `${delay}ms` : '0ms' }}
     >

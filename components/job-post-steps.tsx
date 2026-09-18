@@ -153,7 +153,7 @@ function Pills<T extends string>({
             aria-pressed={selected}
             className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-medium transition-all ${
               selected
-                ? 'border-brand bg-brand text-brand-ink shadow-[0_6px_16px_-8px_rgb(var(--brand)/0.8)]'
+                ? 'border-brand bg-brand text-brand-ink shadow-[0_6px_16px_-8px_rgb(var(--brand)/calc(0.8*var(--glow)))]'
                 : 'border-border bg-bg text-ink-muted hover:border-brand/60 hover:text-ink'
             }`}
           >

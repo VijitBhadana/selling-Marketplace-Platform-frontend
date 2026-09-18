@@ -24,6 +24,7 @@ import { TransportBookingModal } from '@/components/transport-details';
 import { withImageParams } from '@/lib/image-utils';
 import { BookingDetailsModal, BookingDetailsSummary } from '@/components/booking-details';
 import { CheckoutFlow } from '@/components/checkout-flow';
+import { OrderRating } from '@/components/order-rating';
 import { Skeleton, SkeletonGroup } from '@/components/skeleton';
 
 type OrderItem = { id: string; productName: string; unitPrice: string; quantity: number; bookingDetails?: BookingDetails | null };
@@ -64,6 +65,8 @@ type Order = {
   // Null once the seller deletes the shop; shopName is snapshotted at order time.
   listing: { id: string; shopName: string | null; title: string } | null;
   shopName: string | null;
+  // The buyer's own 1–5 rating of this order's shop, null until they rate it.
+  myRating: number | null;
 };
 
 const statusStyles: Record<Order['status'], string> = {
@@ -374,6 +377,9 @@ export default function BucketListPage() {
                 >
                   {order.channel === 'BOOKING' ? 'Mark as completed' : 'Mark as received'}
                 </button>
+              )}
+              {order.status === 'COMPLETED' && order.listing && token && (
+                <OrderRating orderId={order.id} initialRating={order.myRating} token={token} />
               )}
             </div>
           ))}

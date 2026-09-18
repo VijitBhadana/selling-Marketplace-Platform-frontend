@@ -104,6 +104,9 @@ function PostAdForm() {
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');
+  // From "Use current location" only — lets buyers ~25 km away find the shop. Cleared when
+  // the city is typed over, since the coordinates would then point somewhere else.
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
@@ -144,6 +147,7 @@ function PostAdForm() {
 
           if (detectedCity) setCity(detectedCity);
           if (detectedPincode) setPincode(detectedPincode);
+          if (detectedCity) setCoords({ latitude, longitude });
           if (!detectedCity) setLocationError('Could not determine your city from your location — please enter it manually.');
         } catch {
           setLocationError('Could not detect your location — please enter it manually.');
@@ -240,7 +244,7 @@ function PostAdForm() {
           <button
             type="button"
             onClick={() => requireAuth(undefined, 'post-ad')}
-            className="relative mt-7 inline-flex items-center gap-1.5 rounded-full bg-brand px-7 py-3 text-sm font-semibold text-brand-ink shadow-[0_10px_24px_-10px_rgb(var(--brand)/0.8)] transition-transform hover:-translate-y-0.5"
+            className="relative mt-7 inline-flex items-center gap-1.5 rounded-full bg-brand px-7 py-3 text-sm font-semibold text-brand-ink shadow-[0_10px_24px_-10px_rgb(var(--brand)/calc(0.8*var(--glow)))] transition-transform hover:-translate-y-0.5"
           >
             Log in to continue <ArrowRight size={15} />
           </button>
@@ -335,6 +339,7 @@ function PostAdForm() {
           priceType: 'CONTACT_FOR_PRICE',
           city: city.trim(),
           pincode: pincode.trim() || undefined,
+          ...(coords ?? {}),
           images: [image],
         },
         token,
@@ -566,7 +571,7 @@ function PostAdForm() {
                         aria-pressed={selected}
                         className={`group relative flex flex-col items-start gap-2.5 rounded-xl border p-3.5 text-left transition-all duration-200 ${
                           selected
-                            ? 'border-brand bg-brand-soft/60 ring-1 ring-brand shadow-[0_10px_24px_-14px_rgb(var(--brand)/0.9)]'
+                            ? 'border-brand bg-brand-soft/60 ring-1 ring-brand shadow-[0_10px_24px_-14px_rgb(var(--brand)/calc(0.9*var(--glow)))]'
                             : 'border-border bg-bg hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-card'
                         }`}
                       >
@@ -685,7 +690,7 @@ function PostAdForm() {
                               aria-pressed={selected}
                               className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
                                 selected
-                                  ? 'border-brand bg-brand text-brand-ink shadow-[0_6px_16px_-8px_rgb(var(--brand)/0.8)]'
+                                  ? 'border-brand bg-brand text-brand-ink shadow-[0_6px_16px_-8px_rgb(var(--brand)/calc(0.8*var(--glow)))]'
                                   : 'border-border bg-surface text-ink-muted hover:border-brand/60 hover:text-ink'
                               }`}
                             >
@@ -894,7 +899,7 @@ function PostAdForm() {
                     disabled={locating}
                     className="group flex w-full items-center gap-4 rounded-2xl border border-brand/30 bg-brand-soft/30 p-4 text-left transition-colors hover:border-brand hover:bg-brand-soft/60 disabled:cursor-wait disabled:opacity-80"
                   >
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-ink shadow-[0_8px_20px_-10px_rgb(var(--brand)/0.9)]">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-ink shadow-[0_8px_20px_-10px_rgb(var(--brand)/calc(0.9*var(--glow)))]">
                       {locating ? <Loader2 size={20} className="animate-spin" /> : <LocateFixed size={20} />}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -923,7 +928,16 @@ function PostAdForm() {
                     </label>
                     <div className="relative">
                       <Building2 size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted" />
-                      <input id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g. Jaipur" className={`${inputClass} pl-10`} />
+                      <input
+                        id="city"
+                        value={city}
+                        onChange={(e) => {
+                          setCity(e.target.value);
+                          setCoords(null);
+                        }}
+                        placeholder="e.g. Jaipur"
+                        className={`${inputClass} pl-10`}
+                      />
                     </div>
                   </div>
                   <div>
@@ -1041,7 +1055,7 @@ function PostAdForm() {
                 type="button"
                 disabled={!canProceed}
                 onClick={() => setStep((s) => s + 1)}
-                className="group inline-flex items-center gap-1.5 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-brand-ink shadow-[0_10px_24px_-12px_rgb(var(--brand)/0.9)] transition-all hover:opacity-95 disabled:opacity-40 disabled:shadow-none"
+                className="group inline-flex items-center gap-1.5 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-brand-ink shadow-[0_10px_24px_-12px_rgb(var(--brand)/calc(0.9*var(--glow)))] transition-all hover:opacity-95 disabled:opacity-40 disabled:shadow-none"
               >
                 Continue <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
               </button>
@@ -1064,7 +1078,7 @@ function PostAdForm() {
 }
 
 const primaryCta =
-  'inline-flex items-center gap-1.5 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-ink shadow-[0_10px_24px_-10px_rgb(var(--brand)/0.8)] transition-transform hover:-translate-y-0.5';
+  'inline-flex items-center gap-1.5 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-ink shadow-[0_10px_24px_-10px_rgb(var(--brand)/calc(0.8*var(--glow)))] transition-transform hover:-translate-y-0.5';
 const secondaryCta =
   'inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-6 py-3 text-sm font-semibold text-ink transition-colors hover:bg-surface-hover';
 
@@ -1073,7 +1087,7 @@ function SuccessCard({ title, body, children }: { title: string; body: React.Rea
     <div className="mx-auto max-w-lg px-4 py-20">
       <div className="relative overflow-hidden rounded-3xl border border-border bg-surface px-6 py-12 text-center shadow-card sm:px-10">
         <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-80 -translate-x-1/2 rounded-full bg-brand/20 blur-3xl" />
-        <span className="relative mx-auto flex h-20 w-20 animate-fade-in-up items-center justify-center rounded-full bg-brand text-brand-ink shadow-[0_0_0_10px_rgb(var(--brand)/0.12),0_0_0_20px_rgb(var(--brand)/0.06)]">
+        <span className="relative mx-auto flex h-20 w-20 animate-fade-in-up items-center justify-center rounded-full bg-brand text-brand-ink shadow-[0_0_0_10px_rgb(var(--brand)/calc(0.12*var(--glow))),0_0_0_20px_rgb(var(--brand)/calc(0.06*var(--glow)))]">
           <Check size={34} strokeWidth={3} />
         </span>
         <p className="relative mt-7 inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">

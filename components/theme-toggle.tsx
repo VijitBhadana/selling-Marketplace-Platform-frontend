@@ -3,15 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Moon, Sun } from 'lucide-react';
+import { navIconButtonClass } from './nav-icon-button';
 
-export function ThemeToggle() {
+// `bare` drops the border for use inside the navbar's grouped toolbar pill.
+export function ThemeToggle({ bare = false }: { bare?: boolean }) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <div className="h-9 w-9 rounded-full border border-border" aria-hidden />;
+    return <div className={`h-9 w-9 rounded-full ${bare ? '' : 'border border-border'}`} aria-hidden />;
   }
 
   const isDark = resolvedTheme === 'dark';
@@ -21,9 +23,11 @@ export function ThemeToggle() {
       type="button"
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-      className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
+      className={`${navIconButtonClass()} ${bare ? '' : 'border border-border bg-surface'}`}
     >
-      {isDark ? <Sun size={17} /> : <Moon size={17} />}
+      <span key={isDark ? 'sun' : 'moon'} className="animate-fade-in-up">
+        {isDark ? <Sun size={17} /> : <Moon size={17} />}
+      </span>
     </button>
   );
 }

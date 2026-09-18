@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { withImageParams } from '@/lib/image-utils';
 import { ListRowsSkeleton } from './skeleton';
+import { navIconButtonClass } from './nav-icon-button';
 
 type MyShop = {
   id: string;
@@ -146,9 +147,7 @@ export const MyShopsMenu = memo(function MyShopsMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-label="My shops"
         aria-expanded={open}
-        className={`flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
-          open ? 'border-brand bg-brand-soft text-brand' : 'border-border text-ink-muted hover:border-brand hover:bg-brand-soft hover:text-brand'
-        }`}
+        className={navIconButtonClass(open)}
       >
         <Store size={17} />
       </button>

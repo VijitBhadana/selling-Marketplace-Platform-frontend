@@ -4,6 +4,11 @@
 // `text-brand`, `border-brand`, `bg-brand-soft`... across the site follows it.
 
 export const DEFAULT_BRAND_COLOR = '#007AFF';
+
+export type GlowLevel = 'VIVID' | 'SUBTLE' | 'MINIMAL';
+export const DEFAULT_GLOW: GlowLevel = 'VIVID';
+/** Multiplier applied to every brand-tinted glow shadow across the site. */
+export const GLOW_STRENGTH: Record<GlowLevel, number> = { VIVID: 1, SUBTLE: 0.45, MINIMAL: 0 };
 export const BRAND_STYLE_ID = 'brand-theme';
 export const BRAND_THEME_TAG = 'brand-theme';
 
@@ -48,13 +53,15 @@ function inkFor(bg: Rgb): Rgb {
 const triplet = (c: Rgb) => c.join(' ');
 
 /** CSS overriding the brand variables, or '' to keep the built-in palette. */
-export function brandThemeCss(hex: string | null | undefined): string {
-  if (!isHexColor(hex)) return '';
+export function brandThemeCss(hex: string | null | undefined, glow: GlowLevel = DEFAULT_GLOW): string {
+  const glowCss = glow !== DEFAULT_GLOW ? `html:root{--glow:${GLOW_STRENGTH[glow] ?? 1}}` : '';
+  if (!isHexColor(hex)) return glowCss;
   const brand = hexToRgb(hex);
   // Very dark picks are lifted in dark mode so they stay visible on the dark background.
   const darkBrand = luminance(brand) < 0.12 ? mix(brand, LIGHT_BG, 0.35) : mix(brand, LIGHT_BG, 0.12);
 
   return [
+    glowCss,
     `html:root{--brand:${triplet(brand)};--brand-soft:${triplet(mix(brand, LIGHT_BG, 0.86))};` +
       `--brand-ink:${triplet(inkFor(brand))};--scrollbar-thumb-hover:${triplet(brand)}}`,
     `html.dark{--brand:${triplet(darkBrand)};--brand-soft:${triplet(mix(darkBrand, DARK_BG, 0.8))};` +
@@ -63,7 +70,7 @@ export function brandThemeCss(hex: string | null | undefined): string {
 }
 
 /** Applies a colour to the open page immediately (the admin's live preview / save). */
-export function applyBrandColor(hex: string | null) {
+export function applyBrandColor(hex: string | null, glow: GlowLevel = DEFAULT_GLOW) {
   if (typeof document === 'undefined') return;
   let style = document.getElementById(BRAND_STYLE_ID) as HTMLStyleElement | null;
   if (!style) {
@@ -71,5 +78,5 @@ export function applyBrandColor(hex: string | null) {
     style.id = BRAND_STYLE_ID;
     document.head.appendChild(style);
   }
-  style.textContent = brandThemeCss(hex);
+  style.textContent = brandThemeCss(hex, glow);
 }

@@ -10,6 +10,7 @@ import { ChatProvider } from '@/lib/chat-context';
 import { ChatPanel } from '@/components/chat-panel';
 import { CartProvider } from '@/lib/cart-context';
 import { BucketWarningModal } from '@/components/bucket-warning-modal';
+import { AdvertisementPopup } from '@/components/advertisement-popup';
 import { JsonLd } from '@/components/json-ld';
 import { TopLoader } from '@/components/top-loader';
 import { BrandThemeStyle } from '@/components/brand-theme-style';
@@ -116,6 +117,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <AuthModal />
                 <ChatPanel />
                 <BucketWarningModal />
+                <AdvertisementPopup />
               </ChatProvider>
             </CartProvider>
           </AuthProvider>

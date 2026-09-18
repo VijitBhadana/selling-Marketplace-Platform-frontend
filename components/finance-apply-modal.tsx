@@ -609,7 +609,7 @@ export function FinanceApplyModal({
               <button
                 type="submit"
                 disabled={!canSubmit || submitting}
-                className="flex-[2] rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink shadow-[0_8px_20px_-10px_rgb(var(--brand)/0.9)] transition-opacity hover:opacity-90 disabled:opacity-40 disabled:shadow-none"
+                className="flex-[2] rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink shadow-[0_8px_20px_-10px_rgb(var(--brand)/calc(0.9*var(--glow)))] transition-opacity hover:opacity-90 disabled:opacity-40 disabled:shadow-none"
               >
                 {submitting ? 'Sending…' : 'Send application'}
               </button>

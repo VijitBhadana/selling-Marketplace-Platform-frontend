@@ -15,9 +15,9 @@ type StepperProps = {
 function circleClass(done: boolean, active: boolean, clickable: boolean) {
   return `relative z-10 flex shrink-0 items-center justify-center rounded-full font-display text-sm font-bold transition-all duration-300 ${
     done
-      ? 'bg-brand text-brand-ink shadow-[0_6px_16px_-6px_rgb(var(--brand)/0.7)]'
+      ? 'bg-brand text-brand-ink shadow-[0_6px_16px_-6px_rgb(var(--brand)/calc(0.7*var(--glow)))]'
       : active
-      ? 'bg-surface text-brand ring-2 ring-brand ring-offset-2 ring-offset-surface shadow-[0_0_0_6px_rgb(var(--brand)/0.12)]'
+      ? 'bg-surface text-brand ring-2 ring-brand ring-offset-2 ring-offset-surface shadow-[0_0_0_6px_rgb(var(--brand)/calc(0.12*var(--glow)))]'
       : 'bg-surface text-ink-muted ring-1 ring-border'
   } ${clickable ? 'cursor-pointer hover:scale-105' : 'cursor-default'}`;
 }

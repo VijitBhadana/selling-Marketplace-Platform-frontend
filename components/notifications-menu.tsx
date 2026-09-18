@@ -2,19 +2,20 @@
 
 import { memo, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { BadgeCheck, Bell, CalendarCheck, FileText, PackagePlus, ShoppingBag, UserPlus } from 'lucide-react';
+import { BadgeCheck, Bell, CalendarCheck, FileText, Megaphone, PackagePlus, ShoppingBag, UserPlus } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useChat } from '@/lib/chat-context';
 import { api, ApiError } from '@/lib/api';
 import { withImageParams } from '@/lib/image-utils';
 import { ListRowsSkeleton } from './skeleton';
+import { navBadgeClass, navIconButtonClass } from './nav-icon-button';
 
 // Persisted alerts: order placed (seller), job application (recruiter), interview
 // scheduled (candidate, from the Jobs & Freelancing Cloude), plus the Financing Cloude's
 // scheme application (agency) and its decision (applicant).
 type AlertNotification = {
   id: string;
-  type: 'ORDER_PLACED' | 'JOB_APPLICATION' | 'INTERVIEW_SCHEDULED' | 'FINANCE_APPLICATION' | 'FINANCE_DECISION';
+  type: 'ORDER_PLACED' | 'JOB_APPLICATION' | 'INTERVIEW_SCHEDULED' | 'FINANCE_APPLICATION' | 'FINANCE_DECISION' | 'ANNOUNCEMENT';
   title: string;
   body: string;
   read: boolean;
@@ -44,6 +45,7 @@ const ALERT_ICONS = {
   INTERVIEW_SCHEDULED: CalendarCheck,
   FINANCE_APPLICATION: FileText,
   FINANCE_DECISION: BadgeCheck,
+  ANNOUNCEMENT: Megaphone,
 } as const;
 
 const UNREAD_POLL_MS = 10000;
@@ -134,7 +136,7 @@ export const NotificationsMenu = memo(function NotificationsMenu() {
       <Link
         href="/login"
         aria-label="Notifications"
-        className="hidden h-9 w-9 items-center justify-center rounded-full border border-border text-ink-muted transition-colors hover:border-brand hover:bg-brand-soft hover:text-brand lg:flex"
+        className={`${navIconButtonClass()} hidden lg:flex`}
       >
         <Bell size={17} />
       </Link>
@@ -218,13 +220,11 @@ export const NotificationsMenu = memo(function NotificationsMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-label="Notifications"
         aria-expanded={open}
-        className={`relative flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
-          open ? 'border-brand bg-brand-soft text-brand' : 'border-border text-ink-muted hover:border-brand hover:bg-brand-soft hover:text-brand'
-        }`}
+        className={navIconButtonClass(open)}
       >
         <Bell size={17} />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-none text-white">
+          <span className={`${navBadgeClass} bg-accent text-white`}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
