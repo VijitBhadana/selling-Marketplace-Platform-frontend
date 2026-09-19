@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Moon, Sun } from 'lucide-react';
 import { navIconButtonClass } from './nav-icon-button';
 
 // `bare` drops the border for use inside the navbar's grouped toolbar pill.
-export function ThemeToggle({ bare = false }: { bare?: boolean }) {
+export const ThemeToggle = memo(function ThemeToggle({ bare = false }: { bare?: boolean }) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -30,4 +30,4 @@ export function ThemeToggle({ bare = false }: { bare?: boolean }) {
       </span>
     </button>
   );
-}
+});

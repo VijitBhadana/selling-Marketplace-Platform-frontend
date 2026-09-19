@@ -555,7 +555,7 @@ function SchemeCard<P extends FinanceProduct>(props: CardProps<P>) {
         <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-brand-soft text-brand">
           {p.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={withImageParams(p.imageUrl, 'w=160&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
+            <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=160&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
           ) : type ? (
             TYPE_ICONS[type]
           ) : (
@@ -616,7 +616,7 @@ function OtherTile<P extends FinanceProduct>({ product: p, isOwner, actions, onV
       <button type="button" onClick={onView} className="block aspect-square w-full bg-brand-soft">
         {p.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={withImageParams(p.imageUrl, 'w=300&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
+          <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=300&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
         )}
       </button>
       {isOwner && actions}

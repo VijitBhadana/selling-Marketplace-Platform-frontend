@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { CalendarCheck, Check, MessageCircle, Users, XCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -14,7 +15,9 @@ import {
   type MyApplication,
 } from '@/lib/jobs';
 import { useMyJobApplications } from '@/lib/use-my-job-applications';
-import { JobApplyModal } from './job-apply-modal';
+
+// Only needed once someone taps Apply — kept out of the job board's initial bundle.
+const JobApplyModal = dynamic(() => import('./job-apply-modal').then((m) => m.JobApplyModal));
 
 // Apply + Chat buttons for a job (the Jobs & Freelancing replacement for a shop
 // card's Buy/Visit + Chat). The recruiter who posted the job sees their responses instead.

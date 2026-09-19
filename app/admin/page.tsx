@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -24,12 +25,19 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationsMenu } from '@/components/notifications-menu';
 import { LoadingRow } from '@/components/admin/shared';
 import { OverviewSection, RangeSelect, type RangeDays } from '@/components/admin/overview-section';
-import { UsersSection } from '@/components/admin/users-section';
-import { SubscriptionsSection } from '@/components/admin/subscriptions-section';
-import { ThemeSection } from '@/components/admin/theme-section';
-import { UserDetailDrawer } from '@/components/admin/user-detail-drawer';
-import { AnnouncementDialog } from '@/components/admin/announcement-dialog';
-import { AdvertisementDialog } from '@/components/admin/advertisement-dialog';
+
+// Overview is the landing tab; the other tabs and the dialogs are split into their
+// own chunks and only downloaded when the admin opens them.
+const tabLoading = () => <LoadingRow />;
+const UsersSection = dynamic(() => import('@/components/admin/users-section').then((m) => m.UsersSection), { loading: tabLoading });
+const SubscriptionsSection = dynamic(
+  () => import('@/components/admin/subscriptions-section').then((m) => m.SubscriptionsSection),
+  { loading: tabLoading },
+);
+const ThemeSection = dynamic(() => import('@/components/admin/theme-section').then((m) => m.ThemeSection), { loading: tabLoading });
+const UserDetailDrawer = dynamic(() => import('@/components/admin/user-detail-drawer').then((m) => m.UserDetailDrawer));
+const AnnouncementDialog = dynamic(() => import('@/components/admin/announcement-dialog').then((m) => m.AnnouncementDialog));
+const AdvertisementDialog = dynamic(() => import('@/components/admin/advertisement-dialog').then((m) => m.AdvertisementDialog));
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -121,6 +129,13 @@ function AdminPanel() {
     },
     [router, pathname],
   );
+
+  const closeUser = useCallback(() => setOpenUserId(null), []);
+  const bumpRefresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+  const openAnnounce = useCallback(() => setAnnounceOpen(true), []);
+  const closeAnnounce = useCallback(() => setAnnounceOpen(false), []);
+  const openAdvert = useCallback(() => setAdvertOpen(true), []);
+  const closeAdvert = useCallback(() => setAdvertOpen(false), []);
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -327,8 +342,8 @@ function AdminPanel() {
               onDaysChange={setDays}
               onOpenUser={setOpenUserId}
               onNavigate={goTo}
-              onAnnounce={() => setAnnounceOpen(true)}
-              onAdvertise={() => setAdvertOpen(true)}
+              onAnnounce={openAnnounce}
+              onAdvertise={openAdvert}
               refreshKey={refreshKey}
             />
           )}
@@ -340,9 +355,10 @@ function AdminPanel() {
         </main>
       </div>
 
-      <UserDetailDrawer userId={openUserId} onClose={() => setOpenUserId(null)} onChanged={() => setRefreshKey((k) => k + 1)} />
-      <AnnouncementDialog open={announceOpen} onClose={() => setAnnounceOpen(false)} />
-      <AdvertisementDialog open={advertOpen} onClose={() => setAdvertOpen(false)} />
+      {/* Mounted only while open, so their chunks load on first use. */}
+      {openUserId && <UserDetailDrawer userId={openUserId} onClose={closeUser} onChanged={bumpRefresh} />}
+      {announceOpen && <AnnouncementDialog open onClose={closeAnnounce} />}
+      {advertOpen && <AdvertisementDialog open onClose={closeAdvert} />}
     </div>
   );
 }

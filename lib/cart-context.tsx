@@ -88,31 +88,56 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     refresh();
   }, [refresh]);
 
+  // After a cart edit only the items can have changed — no need to re-ask /users/me
+  // for the suspension / warning flags the way a full refresh() does.
+  const reloadItems = useCallback(async () => {
+    if (!token) return;
+    try {
+      setItems(await api.cart.list(token));
+    } catch {
+      // leave previous state on transient failure
+    }
+  }, [token]);
+
   const addToCart = useCallback(
     async (productId: string, bookingDetails?: BookingDetails) => {
       if (!token) return;
       await api.cart.add(productId, token, 1, bookingDetails);
-      await refresh();
+      await reloadItems();
     },
-    [token, refresh],
+    [token, reloadItems],
   );
 
+  // Quantity and remove update the list right away (the backend drops an item whose
+  // quantity goes below 1 too), then only resync from the server if the call failed.
   const setQuantity = useCallback(
     async (productId: string, quantity: number) => {
       if (!token) return;
-      await api.cart.setQuantity(productId, quantity, token);
-      await refresh();
+      setItems((prev) =>
+        quantity < 1 ? prev.filter((i) => i.productId !== productId) : prev.map((i) => (i.productId === productId ? { ...i, quantity } : i)),
+      );
+      try {
+        await api.cart.setQuantity(productId, quantity, token);
+      } catch (err) {
+        await reloadItems();
+        throw err;
+      }
     },
-    [token, refresh],
+    [token, reloadItems],
   );
 
   const removeFromCart = useCallback(
     async (productId: string) => {
       if (!token) return;
-      await api.cart.remove(productId, token);
-      await refresh();
+      setItems((prev) => prev.filter((i) => i.productId !== productId));
+      try {
+        await api.cart.remove(productId, token);
+      } catch (err) {
+        await reloadItems();
+        throw err;
+      }
     },
-    [token, refresh],
+    [token, reloadItems],
   );
 
   const ackWarning = useCallback(async () => {

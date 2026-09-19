@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowUpDown,
@@ -36,7 +36,9 @@ type Option<T extends string> = { value: T; label: string };
 
 // Themed replacement for a native <select> — the OS dropdown list ignores the
 // site's dark theme. Same contract: a value, its options, and onChange.
-function FilterDropdown<T extends string>({
+// Memoized below: its props are constants and state setters, so typing in the
+// job search leaves the four dropdowns alone.
+function FilterDropdownImpl<T extends string>({
   label,
   icon: IconCmp,
   value,
@@ -176,7 +178,9 @@ function FilterDropdown<T extends string>({
   );
 }
 
-function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+const FilterDropdown = memo(FilterDropdownImpl) as typeof FilterDropdownImpl;
+
+const ActiveChip = memo(function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <span className="inline-flex animate-fade-in-up items-center gap-1 rounded-lg border border-brand/30 bg-brand-soft py-1 pl-2.5 pr-1 text-xs font-medium text-brand">
       {label}
@@ -190,7 +194,7 @@ function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }
       </button>
     </span>
   );
-}
+});
 
 // Right-hand section of the Jobs & Freelancing Cloude: search + filters above the job cards.
 // Starts from the server-rendered jobs and only refetches once a filter is used.
@@ -271,27 +275,32 @@ export function JobBoard({
     };
   }, [filtersActive, cloudeSlug, categorySlug, debouncedQuery, sort, postedWithin, jobType, workMode, initialJobs, initialTotal, near]);
 
-  function clearFilters() {
+  const clearFilters = useCallback(() => {
     setQuery('');
     setDebouncedQuery('');
     setSort('latest');
     setPostedWithin('');
     setJobType('');
     setWorkMode('');
-  }
+  }, []);
 
-  // Chips for every non-default filter — each one resets just that filter.
-  const activeChips = [
-    debouncedQuery && { key: 'q', label: `“${debouncedQuery}”`, onRemove: () => setQuery('') },
-    sort !== 'latest' && { key: 'sort', label: SORT_OPTIONS.find((o) => o.value === sort)?.label ?? sort, onRemove: () => setSort('latest') },
-    postedWithin && {
-      key: 'posted',
-      label: DATE_POSTED_OPTIONS.find((o) => o.value === postedWithin)?.label ?? postedWithin,
-      onRemove: () => setPostedWithin(''),
-    },
-    jobType && { key: 'type', label: JOB_TYPE_OPTIONS.find((o) => o.value === jobType)?.label ?? jobType, onRemove: () => setJobType('') },
-    workMode && { key: 'mode', label: WORK_MODE_OPTIONS.find((o) => o.value === workMode)?.label ?? workMode, onRemove: () => setWorkMode('') },
-  ].filter(Boolean) as { key: string; label: string; onRemove: () => void }[];
+  // Chips for every non-default filter — each one resets just that filter. Memoized
+  // (with the typed-but-not-yet-debounced query left out) so keystrokes don't rebuild them.
+  const activeChips = useMemo(
+    () =>
+      [
+        debouncedQuery && { key: 'q', label: `“${debouncedQuery}”`, onRemove: () => setQuery('') },
+        sort !== 'latest' && { key: 'sort', label: SORT_OPTIONS.find((o) => o.value === sort)?.label ?? sort, onRemove: () => setSort('latest') },
+        postedWithin && {
+          key: 'posted',
+          label: DATE_POSTED_OPTIONS.find((o) => o.value === postedWithin)?.label ?? postedWithin,
+          onRemove: () => setPostedWithin(''),
+        },
+        jobType && { key: 'type', label: JOB_TYPE_OPTIONS.find((o) => o.value === jobType)?.label ?? jobType, onRemove: () => setJobType('') },
+        workMode && { key: 'mode', label: WORK_MODE_OPTIONS.find((o) => o.value === workMode)?.label ?? workMode, onRemove: () => setWorkMode('') },
+      ].filter(Boolean) as { key: string; label: string; onRemove: () => void }[],
+    [debouncedQuery, sort, postedWithin, jobType, workMode],
+  );
   const filterCount = activeChips.filter((c) => c.key !== 'q').length;
 
   return (

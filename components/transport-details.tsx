@@ -179,7 +179,7 @@ export function TransportCard<P extends TransportProduct>({
       >
         {p.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={withImageParams(p.imageUrl, 'w=480&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
+          <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=480&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
         ) : (
           <Truck size={34} />
         )}

@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { Check } from 'lucide-react';
 
 const CIRCLE = 36; // px — h-9/w-9
@@ -22,7 +23,9 @@ function circleClass(done: boolean, active: boolean, clickable: boolean) {
   } ${clickable ? 'cursor-pointer hover:scale-105' : 'cursor-default'}`;
 }
 
-export function Stepper({ steps, current, onStepClick, orientation = 'horizontal' }: StepperProps) {
+// Memoized: the post-ad form renders two of these and re-renders on every keystroke,
+// while a stepper's props (constant step list, current step, setStep) rarely change.
+export const Stepper = memo(function Stepper({ steps, current, onStepClick, orientation = 'horizontal' }: StepperProps) {
   const n = steps.length;
 
   if (orientation === 'vertical') {
@@ -166,4 +169,4 @@ export function Stepper({ steps, current, onStepClick, orientation = 'horizontal
       </div>
     </div>
   );
-}
+});

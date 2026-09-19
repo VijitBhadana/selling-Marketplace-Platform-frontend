@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Briefcase, Send, Store, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useChat } from '@/lib/chat-context';
 import { api, ApiError } from '@/lib/api';
+import { useVisibleInterval } from '@/lib/use-visible-interval';
 import { Skeleton, SkeletonGroup } from './skeleton';
 
 type Message = {
@@ -16,6 +17,33 @@ type Message = {
 };
 
 const POLL_INTERVAL_MS = 3000;
+
+// Messages are append-only, so the same length and last id means nothing new arrived.
+function sameMessages(prev: Message[] | null, next: Message[]) {
+  return !!prev && prev.length === next.length && prev[prev.length - 1]?.id === next[next.length - 1]?.id;
+}
+
+// Memoized so typing in the message box doesn't re-render the whole conversation.
+const MessageList = memo(function MessageList({ messages, userId }: { messages: Message[]; userId?: string }) {
+  return (
+    <>
+      {messages.map((m) => {
+        const mine = m.senderId === userId;
+        return (
+          <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[80%] whitespace-pre-line break-words rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                mine ? 'bg-brand text-brand-ink' : 'bg-surface-hover text-ink'
+              }`}
+            >
+              {m.content}
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+});
 
 function ChatMessagesSkeleton() {
   return (
@@ -80,27 +108,23 @@ export function ChatPanel() {
     };
   }, [isOpen, target, token]);
 
-  // Poll for new messages while the panel is open.
-  useEffect(() => {
-    if (!isOpen || !conversationId || !token) return;
-    let cancelled = false;
-
-    async function poll() {
-      try {
-        const data = await api.messages.list(conversationId!, token!);
-        if (!cancelled) setMessages(data);
-      } catch {
-        // transient network hiccup — the next poll will retry
-      }
-    }
-
-    poll();
-    const interval = setInterval(poll, POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [isOpen, conversationId, token]);
+  // Poll for new messages while the panel is open (and the tab is visible). An
+  // unchanged list keeps the old array, so a quiet chat doesn't re-render or
+  // yank the reader back to the bottom every few seconds.
+  useVisibleInterval(
+    (isStale) => {
+      api.messages
+        .list(conversationId!, token!)
+        .then((data: Message[]) => {
+          if (!isStale()) setMessages((prev) => (sameMessages(prev, data) ? prev : data));
+        })
+        .catch(() => {
+          // transient network hiccup — the next poll will retry
+        });
+    },
+    POLL_INTERVAL_MS,
+    isOpen && conversationId && token ? `${conversationId}:${token}` : null,
+  );
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -167,20 +191,7 @@ export function ChatPanel() {
             </p>
           )}
 
-          {messages?.map((m) => {
-            const mine = m.senderId === user?.id;
-            return (
-              <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-[80%] whitespace-pre-line break-words rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
-                    mine ? 'bg-brand text-brand-ink' : 'bg-surface-hover text-ink'
-                  }`}
-                >
-                  {m.content}
-                </div>
-              </div>
-            );
-          })}
+          {messages && <MessageList messages={messages} userId={user?.id} />}
         </div>
 
         {error && <p className="border-t border-border px-4 py-2 text-xs text-accent">{error}</p>}

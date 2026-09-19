@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ShopCard } from './shop-card';
 import { getPostedListingsFor, getPostedListingsForCloude, removePostedListing } from '@/lib/posted-listings';
@@ -49,20 +49,23 @@ export function CategoryShopGrid({
       return !isNowOnBackend;
     });
 
-    setPostedItems(
-      stillLocalOnly.map((p) => ({
-        id: p.id,
-        shopName: p.shopName || p.title,
-        categoryName: p.categoryName,
-        description: p.description,
-        image: p.image,
-        city: p.city,
-        isNew: true,
-      })),
+    // Nearly always empty — keep the same array then, so the grid doesn't re-render for nothing.
+    setPostedItems((prev) =>
+      prev.length === 0 && stillLocalOnly.length === 0
+        ? prev
+        : stillLocalOnly.map((p) => ({
+            id: p.id,
+            shopName: p.shopName || p.title,
+            categoryName: p.categoryName,
+            description: p.description,
+            image: p.image,
+            city: p.city,
+            isNew: true,
+          })),
     );
   }, [cloudeSlug, categorySlug, staticItems]);
 
-  const allItems = [...postedItems, ...staticItems];
+  const allItems = useMemo(() => [...postedItems, ...staticItems], [postedItems, staticItems]);
 
   if (allItems.length === 0) {
     return (

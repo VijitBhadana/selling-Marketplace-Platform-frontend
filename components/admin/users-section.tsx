@@ -45,12 +45,28 @@ export function UsersSection({
   const [error, setError] = useState<string | null>(null);
   const [target, setTarget] = useState<AdminUser | null>(null);
 
+  // A new search or filter goes back to page 1 in the same update — resetting it in a
+  // separate effect fetched the old page first and then page 1 (two requests, and the
+  // slower one could win).
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(query.trim()), 300);
+    const next = query.trim();
+    if (next === debounced) return;
+    const t = setTimeout(() => {
+      setDebounced(next);
+      setPage(1);
+    }, 300);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, debounced]);
 
-  useEffect(() => setPage(1), [role, status, debounced]);
+  const changeRole = useCallback((next: RoleFilter) => {
+    setRole(next);
+    setPage(1);
+  }, []);
+
+  const changeStatus = useCallback((next: StatusFilter) => {
+    setStatus(next);
+    setPage(1);
+  }, []);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -126,7 +142,7 @@ export function UsersSection({
           <Segmented
             label="Role"
             value={role}
-            onChange={setRole}
+            onChange={changeRole}
             options={[
               { value: 'ALL', label: 'All' },
               { value: 'BUYER', label: 'Buyers' },
@@ -136,7 +152,7 @@ export function UsersSection({
           <Segmented
             label="Status"
             value={status}
-            onChange={setStatus}
+            onChange={changeStatus}
             options={[
               { value: 'all', label: 'Any status' },
               { value: 'active', label: 'Active' },

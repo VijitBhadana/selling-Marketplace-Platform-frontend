@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { BadgeIndianRupee, Check, GraduationCap, Home, ImagePlus, Loader2, MapPin, MessageCircle, Package, Pencil, Plus, ShoppingCart, Stethoscope, Tag, Trash2, Truck, Wrench, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useCart } from '@/lib/cart-context';
@@ -86,8 +87,10 @@ import {
   type FinanceFormValues,
 } from '@/lib/finance-details';
 import { FinanceDetailsModal, FinanceFieldsEditor, FinanceProductGroups, FinanceTypePicker } from '@/components/finance-details';
-import { FinanceApplyModal } from '@/components/finance-apply-modal';
 import { useMyFinanceApplications } from '@/lib/use-my-finance-applications';
+
+// Only needed once a buyer taps Apply — kept out of the shop page's initial bundle.
+const FinanceApplyModal = dynamic(() => import('@/components/finance-apply-modal').then((m) => m.FinanceApplyModal));
 
 type Product = {
   id: string;
@@ -163,9 +166,9 @@ export function ShopProductsSection({
   const isEducation = isEducationCloude(cloudeSlug);
   const isFinance = isFinanceCloude(cloudeSlug);
   // A financing scheme is applied for, never bought — this is the buyer's own application to each.
-  const { markApplied, statusLabel } = useMyFinanceApplications();
+  const { markApplied, statusLabel } = useMyFinanceApplications(isFinance && !isOwner);
 
-  function flashAdded(id: string) {
+  const flashAdded = useCallback((id: string) => {
     setAddedIds((prev) => new Set(prev).add(id));
     window.setTimeout(() => {
       setAddedIds((prev) => {
@@ -174,7 +177,7 @@ export function ShopProductsSection({
         return next;
       });
     }, 1500);
-  }
+  }, []);
 
   // Financing Cloude: applying is not buying — no cart, no payment. The buyer fills in the
   // agency's form, uploads the papers it asks for, and the agency approves or rejects.
@@ -182,36 +185,44 @@ export function ShopProductsSection({
     requireAuth(() => setApplyingFor(product), 'purchase');
   }
 
-  function handleBuy(product: Product) {
-    requireAuth(async () => {
-      if (bookingKind) {
-        setBookingProduct(product);
-        return;
-      }
-      setAddingId(product.id);
-      try {
-        await addToCart(product.id);
-        flashAdded(product.id);
-      } finally {
-        setAddingId(null);
-      }
-    }, 'purchase');
-  }
+  // Stable callbacks, so the memoized product cards below only re-render when their own
+  // product's state (adding / added / deleting) changes.
+  const handleBuy = useCallback(
+    (product: Product) => {
+      requireAuth(async () => {
+        if (bookingKind) {
+          setBookingProduct(product);
+          return;
+        }
+        setAddingId(product.id);
+        try {
+          await addToCart(product.id);
+          flashAdded(product.id);
+        } finally {
+          setAddingId(null);
+        }
+      }, 'purchase');
+    },
+    [requireAuth, bookingKind, addToCart, flashAdded],
+  );
 
-  async function handleDelete(id: string) {
-    if (!token) return;
-    if (!window.confirm(`Delete this ${propertyType ? 'property' : isTransport ? 'vehicle' : 'product'}? This cannot be undone.`)) return;
-    setDeletingId(id);
-    setDeleteError(null);
-    try {
-      await api.products.remove(id, token);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.message : 'Could not delete it. Please try again.');
-    } finally {
-      setDeletingId(null);
-    }
-  }
+  const handleDelete = useCallback(
+    async (id: string) => {
+      if (!token) return;
+      if (!window.confirm(`Delete this ${propertyType ? 'property' : isTransport ? 'vehicle' : 'product'}? This cannot be undone.`)) return;
+      setDeletingId(id);
+      setDeleteError(null);
+      try {
+        await api.products.remove(id, token);
+        setProducts((prev) => prev.filter((p) => p.id !== id));
+      } catch (err) {
+        setDeleteError(err instanceof ApiError ? err.message : 'Could not delete it. Please try again.');
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [token, propertyType, isTransport],
+  );
 
   async function handleDeleteAll() {
     if (!token || products.length === 0) return;
@@ -330,10 +341,10 @@ export function ShopProductsSection({
               buying={addingId === p.id}
               added={addedIds.has(p.id)}
               suspended={suspended}
-              onView={() => setViewingProduct(p)}
-              onEdit={() => setEditingProduct(p)}
-              onDelete={() => handleDelete(p.id)}
-              onBuy={() => handleBuy(p)}
+              onView={setViewingProduct}
+              onEdit={setEditingProduct}
+              onDelete={handleDelete}
+              onBuy={handleBuy}
             />
           ))}
         </div>
@@ -387,47 +398,19 @@ export function ShopProductsSection({
       ) : (
         <div className="grid grid-cols-2 gap-2.5 min-[420px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6">
           {products.map((p) => (
-            <div key={p.id} className="group relative overflow-hidden rounded-xl border border-border">
-              <div className="aspect-square bg-brand-soft">
-                {p.imageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={withImageParams(p.imageUrl, 'w=300&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
-                )}
-              </div>
-
-              {isOwner && (
-                <OwnerActions deleting={deletingId === p.id} onEdit={() => setEditingProduct(p)} onDelete={() => handleDelete(p.id)} />
-              )}
-
-              <div className="p-2">
-                <p className="truncate text-xs font-medium text-ink">{p.name}</p>
-                <p className="truncate text-[11px] font-semibold text-brand">
-                  {p.priceType === 'CONTACT_FOR_PRICE'
-                    ? 'Contact for price'
-                    : `₹${p.price}${bookingKind ? ` ${priceUnitSuffix(bookingKind, effectivePriceUnit(bookingKind, p.priceUnit))}` : ''}`}
-                </p>
-
-                {!isOwner && (
-                  <button
-                    type="button"
-                    disabled={addingId === p.id || addedIds.has(p.id) || suspended}
-                    title={suspended ? 'Your account is suspended' : undefined}
-                    onClick={() => handleBuy(p)}
-                    className="mt-2 flex w-full items-center justify-center gap-1 rounded-full bg-brand py-1.5 text-[11px] font-semibold text-brand-ink transition-opacity hover:opacity-90 disabled:opacity-60"
-                  >
-                    {addedIds.has(p.id) ? (
-                      <>
-                        <Check size={12} /> Added
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart size={12} /> {bookingKind === 'RENT' ? 'Rent' : 'Buy'}
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
+            <ProductTile
+              key={p.id}
+              product={p}
+              isOwner={isOwner}
+              bookingKind={bookingKind}
+              deleting={deletingId === p.id}
+              buying={addingId === p.id}
+              added={addedIds.has(p.id)}
+              suspended={suspended}
+              onEdit={setEditingProduct}
+              onDelete={handleDelete}
+              onBuy={handleBuy}
+            />
           ))}
         </div>
       )}
@@ -606,18 +589,85 @@ function OwnerActions({ deleting, onEdit, onDelete }: { deleting: boolean; onEdi
   );
 }
 
+/** A plain product in the default grid: photo, name, price and Buy / Rent. */
+const ProductTile = memo(function ProductTile({
+  product: p,
+  isOwner,
+  bookingKind,
+  deleting,
+  buying,
+  added,
+  suspended,
+  onEdit,
+  onDelete,
+  onBuy,
+}: {
+  product: Product;
+  isOwner: boolean;
+  bookingKind: BookingKind | null;
+  deleting: boolean;
+  buying: boolean;
+  added: boolean;
+  suspended: boolean;
+  onEdit: (product: Product) => void;
+  onDelete: (id: string) => void;
+  onBuy: (product: Product) => void;
+}) {
+  return (
+    <div className="group relative overflow-hidden rounded-xl border border-border">
+      <div className="aspect-square bg-brand-soft">
+        {p.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=300&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
+        )}
+      </div>
+
+      {isOwner && <OwnerActions deleting={deleting} onEdit={() => onEdit(p)} onDelete={() => onDelete(p.id)} />}
+
+      <div className="p-2">
+        <p className="truncate text-xs font-medium text-ink">{p.name}</p>
+        <p className="truncate text-[11px] font-semibold text-brand">
+          {p.priceType === 'CONTACT_FOR_PRICE'
+            ? 'Contact for price'
+            : `₹${p.price}${bookingKind ? ` ${priceUnitSuffix(bookingKind, effectivePriceUnit(bookingKind, p.priceUnit))}` : ''}`}
+        </p>
+
+        {!isOwner && (
+          <button
+            type="button"
+            disabled={buying || added || suspended}
+            title={suspended ? 'Your account is suspended' : undefined}
+            onClick={() => onBuy(p)}
+            className="mt-2 flex w-full items-center justify-center gap-1 rounded-full bg-brand py-1.5 text-[11px] font-semibold text-brand-ink transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {added ? (
+              <>
+                <Check size={12} /> Added
+              </>
+            ) : (
+              <>
+                <ShoppingCart size={12} /> {bookingKind === 'RENT' ? 'Rent' : 'Buy'}
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
+
 /** Property Cloude card: rent/sale badge, price per month/day/year, address and a few key facts. */
-function PropertyCard({
+const PropertyCard = memo(function PropertyCard({
   product: p,
   isOwner,
   deleting,
   buying,
   added,
   suspended,
-  onView,
+  onView: onViewProduct,
   onEdit,
   onDelete,
-  onBuy,
+  onBuy: onBuyProduct,
 }: {
   product: Product;
   isOwner: boolean;
@@ -625,11 +675,13 @@ function PropertyCard({
   buying: boolean;
   added: boolean;
   suspended: boolean;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onBuy: () => void;
+  onView: (product: Product) => void;
+  onEdit: (product: Product) => void;
+  onDelete: (id: string) => void;
+  onBuy: (product: Product) => void;
 }) {
+  const onView = () => onViewProduct(p);
+  const onBuy = () => onBuyProduct(p);
   const forSale = listingForOf(p.propertyDetails) === 'SALE';
   const highlights = propertyHighlights(p.propertyDetails);
   const address = typeof p.propertyDetails?.address === 'string' ? p.propertyDetails.address : '';
@@ -640,7 +692,7 @@ function PropertyCard({
       <button type="button" onClick={onView} aria-label={`View details of ${p.name}`} className="relative block aspect-[4/3] w-full bg-brand-soft">
         {p.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={withImageParams(p.imageUrl, 'w=480&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
+          <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=480&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
         )}
         <span
           className={`absolute left-2 top-2 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
@@ -651,7 +703,7 @@ function PropertyCard({
         </span>
       </button>
 
-      {isOwner && <OwnerActions deleting={deleting} onEdit={onEdit} onDelete={onDelete} />}
+      {isOwner && <OwnerActions deleting={deleting} onEdit={() => onEdit(p)} onDelete={() => onDelete(p.id)} />}
 
       <div className="flex flex-1 flex-col p-3">
         <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
@@ -704,7 +756,7 @@ function PropertyCard({
       </div>
     </div>
   );
-}
+});
 
 function ChoiceCard({
   selected,

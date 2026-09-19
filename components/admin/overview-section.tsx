@@ -419,12 +419,17 @@ function LatestSignups({
   const [copied, setCopied] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // A new search or role filter goes back to page 1 in the same update, so it's one
+  // request — not the old page first and then page 1.
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(query.trim()), 300);
+    const next = query.trim();
+    if (next === debounced) return;
+    const t = setTimeout(() => {
+      setDebounced(next);
+      setPage(1);
+    }, 300);
     return () => clearTimeout(t);
-  }, [query]);
-
-  useEffect(() => setPage(1), [debounced, role]);
+  }, [query, debounced]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -523,7 +528,10 @@ function LatestSignups({
               <select
                 aria-label="Filter by role"
                 value={role}
-                onChange={(e) => setRole(e.target.value as RoleFilter)}
+                onChange={(e) => {
+                  setRole(e.target.value as RoleFilter);
+                  setPage(1);
+                }}
                 className="absolute inset-0 cursor-pointer opacity-0"
               >
                 <option value="">All Roles</option>

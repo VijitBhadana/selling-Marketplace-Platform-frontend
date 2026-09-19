@@ -446,7 +446,7 @@ function Thumb({ imageUrl, name, icon }: { imageUrl: string | null; name: string
     <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-brand-soft text-brand">
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={withImageParams(imageUrl, 'w=160&q=75&auto=format&fit=crop')} alt={name} className="h-full w-full object-cover" />
+        <img loading="lazy" decoding="async" src={withImageParams(imageUrl, 'w=160&q=75&auto=format&fit=crop')} alt={name} className="h-full w-full object-cover" />
       ) : (
         icon
       )}
@@ -498,7 +498,7 @@ function CourseCard<P extends EducationProduct>(props: CardProps<P>) {
       >
         {p.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={withImageParams(p.imageUrl, 'w=480&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
+          <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=480&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
         ) : (
           <GraduationCap size={32} />
         )}
@@ -630,7 +630,7 @@ function BookCard<P extends EducationProduct>(props: CardProps<P>) {
       >
         {p.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={withImageParams(p.imageUrl, 'w=320&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
+          <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=320&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
         ) : (
           <BookOpen size={30} />
         )}
@@ -662,7 +662,7 @@ function OtherTile<P extends EducationProduct>({ product: p, isOwner, suspended,
       <button type="button" onClick={onView} aria-label={`View details of ${p.name}`} className="block aspect-square w-full bg-brand-soft">
         {p.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={withImageParams(p.imageUrl, 'w=300&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
+          <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=300&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
         )}
       </button>
       {actions}

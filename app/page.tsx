@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { ShieldCheck, MapPin, Zap, ArrowRight, Check, Rocket } from 'lucide-react';
 import { cloudes } from '@/lib/cloudes-data';
@@ -7,10 +8,11 @@ import { CloudeCard } from '@/components/cloude-card';
 import { LiveShopCard } from '@/components/live-shop-card';
 import { FreshJobCard } from '@/components/fresh-job-card';
 import { ViewAllCloudes } from '@/components/view-all-cloudes';
-import { nearParams } from '@/lib/user-location';
+import { nearParams, type UserLocation } from '@/lib/user-location';
 import { getUserLocation } from '@/lib/user-location-server';
 import { HeroTwoColumn } from '@/components/hero-two-column';
 import { ScrollReveal } from '@/components/scroll-reveal';
+import { ShopCardSkeleton, SkeletonGroup } from '@/components/skeleton';
 
 // Title, description and OG card come from the root layout defaults; only the
 // canonical is page-specific.
@@ -64,14 +66,69 @@ function AnimatedWords({ text, startDelay, stepMs }: { text: string; startDelay:
   return <>{words.flatMap((word, i) => (i === 0 ? [word] : [' ', word]))}</>;
 }
 
-export default async function HomePage() {
-  // Live shops with their latest products/services; an unreachable API just shows the empty state.
-  // The 8 best-rated shops, services and jobs in the visitor's area (navbar location
-  // picker — their city, its sub-areas and ~25 km around). An unreachable API just
-  // shows the empty state.
-  const location = getUserLocation();
+// The 8 best-rated shops, services and jobs in the visitor's area (navbar location
+// picker — their city, its sub-areas and ~25 km around). Its own async component so
+// the page streams: the hero and Cloude grid paint straight away while this waits on
+// the API behind a skeleton. An unreachable API just shows the empty state.
+async function FreshListings({ location }: { location: UserLocation | null }) {
   const city = location?.city;
   const fresh: FreshItem[] = await api.listings.fresh(nearParams(location), 8).catch(() => []);
+
+  if (fresh.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+        <p className="font-display text-base font-bold text-ink">
+          {city ? `Nothing live near ${city} yet` : 'No live shops yet'}
+        </p>
+        <p className="max-w-sm text-sm text-ink-muted">
+          {city
+            ? 'Be the first shop, service or job in your area — or pick another location from the search bar.'
+            : 'Be the first to open a shop — it shows up here as soon as it goes live.'}
+        </p>
+        <Link href="/post-ad" className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink hover:opacity-90">
+          Post your ad — it's free
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {fresh.map((item, i) => (
+        <ScrollReveal key={`${item.kind}-${item.id}`} direction="up" delay={(i % 4) * 90} className="h-full">
+          {item.kind === 'shop' ? (
+            <LiveShopCard shop={item} rating={item.rating} />
+          ) : (
+            <FreshJobCard job={item} rating={item.rating} />
+          )}
+        </ScrollReveal>
+      ))}
+    </div>
+  );
+}
+
+function FreshListingsSkeleton() {
+  return (
+    <SkeletonGroup label="Loading fresh listings…" className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {Array.from({ length: 4 }, (_, i) => (
+        <ShopCardSkeleton key={i} />
+      ))}
+    </SkeletonGroup>
+  );
+}
+
+// Serializable once at module load instead of on every request.
+const cloudeLinks = cloudes.map((c) => ({
+  slug: c.slug,
+  name: c.name,
+  icon: c.icon,
+  description: c.description,
+  categoryCount: c.categories.length,
+}));
+
+export default function HomePage() {
+  const location = getUserLocation();
+  const city = location?.city;
 
   return (
     <div>
@@ -208,43 +265,11 @@ export default async function HomePage() {
               )}
             </p>
           </div>
-          <ViewAllCloudes
-            cloudes={cloudes.map((c) => ({
-              slug: c.slug,
-              name: c.name,
-              icon: c.icon,
-              description: c.description,
-              categoryCount: c.categories.length,
-            }))}
-          />
+          <ViewAllCloudes cloudes={cloudeLinks} />
         </div>
-        {fresh.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {fresh.map((item, i) => (
-              <ScrollReveal key={`${item.kind}-${item.id}`} direction="up" delay={(i % 4) * 90} className="h-full">
-                {item.kind === 'shop' ? (
-                  <LiveShopCard shop={item} rating={item.rating} />
-                ) : (
-                  <FreshJobCard job={item} rating={item.rating} />
-                )}
-              </ScrollReveal>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
-            <p className="font-display text-base font-bold text-ink">
-              {city ? `Nothing live near ${city} yet` : 'No live shops yet'}
-            </p>
-            <p className="max-w-sm text-sm text-ink-muted">
-              {city
-                ? 'Be the first shop, service or job in your area — or pick another location from the search bar.'
-                : 'Be the first to open a shop — it shows up here as soon as it goes live.'}
-            </p>
-            <Link href="/post-ad" className="rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-brand-ink hover:opacity-90">
-              Post your ad — it's free
-            </Link>
-          </div>
-        )}
+        <Suspense fallback={<FreshListingsSkeleton />}>
+          <FreshListings location={location} />
+        </Suspense>
       </section>
 
       {/* CTA */}

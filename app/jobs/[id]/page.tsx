@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { Building2, CalendarDays, Clock, Laptop, MapPin, Users } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { cloudes } from '@/lib/cloudes-data';
@@ -15,14 +16,16 @@ type Props = { params: { id: string } };
 
 const jobsCloude = cloudes.find((c) => c.jobBoard)!;
 
-async function getJob(id: string): Promise<Job | null> {
+// generateMetadata and the page both need the job — React's cache() makes that one
+// backend call per request (job reads are uncached, so fetch dedupe can't be relied on).
+const getJob = cache(async (id: string): Promise<Job | null> => {
   try {
     return await api.jobs.byId(id);
   } catch (err) {
     if (err instanceof ApiError && (err.status === 404 || err.status === 400)) return null;
     throw err;
   }
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const job = await getJob(params.id).catch(() => null);

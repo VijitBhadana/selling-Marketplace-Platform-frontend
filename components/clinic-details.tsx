@@ -313,7 +313,7 @@ function DoctorCard<P extends ClinicProduct>({ product: p, isOwner, suspended, b
         <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-brand-soft text-brand">
           {p.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={withImageParams(p.imageUrl, 'w=160&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover object-top" />
+            <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=160&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover object-top" />
           ) : (
             <Stethoscope size={24} />
           )}
@@ -358,7 +358,7 @@ function MedicineCard<P extends ClinicProduct>({ product: p, isOwner, suspended,
       <button type="button" onClick={onView} aria-label={`View details of ${p.name}`} className="relative flex aspect-square w-full items-center justify-center bg-brand-soft text-brand">
         {p.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={withImageParams(p.imageUrl, 'w=300&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
+          <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=300&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
         ) : (
           <Pill size={30} />
         )}
@@ -394,7 +394,7 @@ function OtherTile<P extends ClinicProduct>({ product: p, isOwner, suspended, bu
       <button type="button" onClick={onView} aria-label={`View details of ${p.name}`} className="block aspect-square w-full bg-brand-soft">
         {p.imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={withImageParams(p.imageUrl, 'w=300&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
+          <img loading="lazy" decoding="async" src={withImageParams(p.imageUrl, 'w=300&q=75&auto=format&fit=crop')} alt={p.name} className="h-full w-full object-cover" />
         )}
       </button>
       {actions}

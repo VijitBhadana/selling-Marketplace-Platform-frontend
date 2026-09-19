@@ -21,7 +21,30 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T = any>(path: string, opts: ApiOptions = {}): Promise<T> {
+// Identical GETs already in flight share one request — e.g. AuthProvider and
+// CartProvider both asking for /users/me right after login, or a component
+// remounting mid-fetch. Browser only: on the server Next already dedupes fetch()
+// within a render, and a module-level map would leak between visitors.
+const inflight = new Map<string, Promise<unknown>>();
+
+export function apiFetch<T = any>(path: string, opts: ApiOptions = {}): Promise<T> {
+  if (typeof window === 'undefined') return request<T>(path, opts);
+  if ((opts.method ?? 'GET') !== 'GET') {
+    // Once a write lands, a GET that was already in flight may predate it — later
+    // reads (e.g. the cart right after adding to it) must start a fresh request.
+    return request<T>(path, opts).finally(() => inflight.clear());
+  }
+  const key = `${opts.token ?? ''} ${path}`;
+  const pending = inflight.get(key);
+  if (pending) return pending as Promise<T>;
+  const promise: Promise<T> = request<T>(path, opts).finally(() => {
+    if (inflight.get(key) === promise) inflight.delete(key);
+  });
+  inflight.set(key, promise);
+  return promise;
+}
+
+async function request<T>(path: string, opts: ApiOptions): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {

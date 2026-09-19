@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, ChevronDown, Crosshair, Loader2, MapPin, X } from 'lucide-react';
 import {
@@ -21,7 +21,7 @@ let autoDetectStarted = false;
  * detect it again, type another one, or go back to all cities. On a first visit it asks
  * for location once by itself, so shops near the visitor show up straight away.
  */
-export function LocationPicker({ variant }: { variant: 'desktop' | 'mobile' }) {
+export const LocationPicker = memo(function LocationPicker({ variant }: { variant: 'desktop' | 'mobile' }) {
   const router = useRouter();
   const [city, setCity] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -176,4 +176,4 @@ export function LocationPicker({ variant }: { variant: 'desktop' | 'mobile' }) {
       )}
     </div>
   );
-}
+});

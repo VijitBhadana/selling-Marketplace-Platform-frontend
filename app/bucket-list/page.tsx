@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { AlertTriangle, CalendarCheck, Minus, Package, Pencil, Plus, ShoppingBasket, Store, Trash2, Truck, Utensils, Wrench } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useCart, type CartItem } from '@/lib/cart-context';
@@ -23,9 +24,11 @@ import { transportQuote } from '@/lib/transport-details';
 import { TransportBookingModal } from '@/components/transport-details';
 import { withImageParams } from '@/lib/image-utils';
 import { BookingDetailsModal, BookingDetailsSummary } from '@/components/booking-details';
-import { CheckoutFlow } from '@/components/checkout-flow';
 import { OrderRating } from '@/components/order-rating';
 import { Skeleton, SkeletonGroup } from '@/components/skeleton';
+
+// Only needed once the buyer taps Proceed — kept out of the page's initial bundle.
+const CheckoutFlow = dynamic(() => import('@/components/checkout-flow').then((m) => m.CheckoutFlow));
 
 type OrderItem = { id: string; productName: string; unitPrice: string; quantity: number; bookingDetails?: BookingDetails | null };
 
@@ -131,7 +134,7 @@ export default function BucketListPage() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [receivingId, setReceivingId] = useState<string | null>(null);
 
-  async function loadOrders() {
+  const loadOrders = useCallback(async () => {
     if (!token) return;
     try {
       setOrders(await api.orders.mine(token));
@@ -139,23 +142,57 @@ export default function BucketListPage() {
       // leave previous list on transient failure; a failed first load shows the empty state
       setOrders((prev) => prev ?? []);
     }
-  }
+  }, [token]);
 
   useEffect(() => {
     loadOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [loadOrders]);
 
-  async function handleReceive(orderId: string) {
-    if (!token) return;
-    setReceivingId(orderId);
-    try {
-      await api.orders.receive(orderId, token);
-      await loadOrders();
-    } finally {
-      setReceivingId(null);
+  const handleReceive = useCallback(
+    async (orderId: string) => {
+      if (!token) return;
+      setReceivingId(orderId);
+      try {
+        await api.orders.receive(orderId, token);
+        await loadOrders();
+      } finally {
+        setReceivingId(null);
+      }
+    },
+    [token, loadOrders],
+  );
+
+  // Everything derived from the cart, recomputed only when the items change — not on
+  // every render (orders loading, a modal opening, a quantity button spinner...).
+  const cart = useMemo(() => {
+    const groups = new Map<string, CartItem[]>();
+    for (const item of items) {
+      const key = item.product.listing.id;
+      const group = groups.get(key) ?? [];
+      group.push(item);
+      groups.set(key, group);
     }
-  }
+    const kinds = items.map(bookingKindOf);
+    return {
+      groups: Array.from(groups.entries()),
+      grandTotal: items.reduce((sum, item) => sum + lineTotal(item), 0),
+      isFoodOrder: items.length > 0 && items.every((item) => item.product.listing.cloude?.slug === 'food'),
+      // Skill Cloude on-site services, Clinic & Doctors Cloude doctor appointments and Education
+      // Cloude course / class enrolments and counselling sessions.
+      isServiceOrder:
+        items.length > 0 &&
+        items.every(
+          (item) =>
+            item.product.isService && ['skill', CLINIC_CLOUDE_SLUG, EDUCATION_CLOUDE_SLUG].includes(item.product.listing.cloude?.slug ?? ''),
+        ),
+      missingBookingDetails: items.some((item, i) => kinds[i] && !item.bookingDetails),
+      isBookingOrder: items.length > 0 && kinds.every(Boolean),
+      hasBookingItems: kinds.some(Boolean),
+      // Rent Cloude: the owner hands the thing over before any counter payment would happen,
+      // so a bucket holding any rental can only be paid for online.
+      hasRentItems: kinds.includes('RENT'),
+    };
+  }, [items]);
 
   if (!authLoading && !user) {
     return (
@@ -182,31 +219,9 @@ export default function BucketListPage() {
     );
   }
 
-  const groups = new Map<string, typeof items>();
-  for (const item of items) {
-    const key = item.product.listing.id;
-    const group = groups.get(key) ?? [];
-    group.push(item);
-    groups.set(key, group);
-  }
-
-  const grandTotal = items.reduce((sum, item) => sum + lineTotal(item), 0);
-  const isFoodOrder = items.length > 0 && items.every((item) => item.product.listing.cloude?.slug === 'food');
-  // Skill Cloude on-site services, Clinic & Doctors Cloude doctor appointments and Education
-  // Cloude course / class enrolments and counselling sessions.
-  const isServiceOrder =
-    items.length > 0 &&
-    items.every(
-      (item) => item.product.isService && ['skill', CLINIC_CLOUDE_SLUG, EDUCATION_CLOUDE_SLUG].includes(item.product.listing.cloude?.slug ?? ''),
-    );
+  const { groups, grandTotal, isFoodOrder, isServiceOrder, missingBookingDetails, isBookingOrder, hasBookingItems, hasRentItems } = cart;
   const cartPending = authLoading || !cartReady;
-  const missingBookingDetails = items.some((item) => bookingKindOf(item) && !item.bookingDetails);
   const editingKind = editingBooking ? bookingKindOf(editingBooking) : null;
-  const isBookingOrder = items.length > 0 && items.every((item) => bookingKindOf(item));
-  const hasBookingItems = items.some((item) => bookingKindOf(item));
-  // Rent Cloude: the owner hands the thing over before any counter payment would happen,
-  // so a bucket holding any rental can only be paid for online.
-  const hasRentItems = items.some((item) => bookingKindOf(item) === 'RENT');
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 font-opensans sm:px-6">
@@ -224,7 +239,7 @@ export default function BucketListPage() {
 
       {!cartPending && items.length > 0 && (
         <div className="mt-6 space-y-4">
-          {Array.from(groups.entries()).map(([listingId, groupItems]) => (
+          {groups.map(([listingId, groupItems]) => (
             <div key={listingId} className="rounded-2xl border border-border bg-surface p-5">
               <h2 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 <Store size={13} className="text-brand" /> {groupItems[0].product.listing.shopName || groupItems[0].product.listing.title}
@@ -239,6 +254,8 @@ export default function BucketListPage() {
                       {item.product.imageUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
+                          loading="lazy"
+                          decoding="async"
                           src={withImageParams(item.product.imageUrl, 'w=120&q=75&auto=format&fit=crop')}
                           alt={item.product.name}
                           className="h-full w-full object-cover"

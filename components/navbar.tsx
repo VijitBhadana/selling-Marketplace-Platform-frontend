@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Cloud, Menu, Search, X, PlusCircle, Plus, ArrowRight, UserRound, ChevronRight, ShoppingBasket, LayoutGrid, LogOut, ChevronDown, Store, ShoppingBag, ShieldCheck } from 'lucide-react';
@@ -37,35 +37,202 @@ const cloudeIconColors: Record<string, string> = {
 };
 const iconColor = (slug: string) => cloudeIconColors[slug] ?? 'text-brand';
 
+const chipBase =
+  'group flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md';
+const chipActive = 'border-brand bg-brand text-brand-ink shadow-[0_2px_8px_-2px_rgb(var(--brand)/calc(0.5*var(--glow)))]';
+const chipIdle = 'border-border bg-surface text-ink-muted hover:border-brand hover:bg-brand-soft hover:text-brand';
+
+const isCloudeActive = (pathname: string | null, slug: string) =>
+  pathname === `/cloudes/${slug}` || !!pathname?.startsWith(`/cloudes/${slug}/`);
+
+// The pieces below are memoized and own their state, so typing in a search box
+// re-renders only that box — not the whole header with its ~30 Cloude links —
+// and a scroll / profile-menu toggle in Navbar doesn't re-render them either.
+
+/** Desktop search: location, query, clear / "/" hint and submit. Press "/" anywhere to focus it. */
+const DesktopSearch = memo(function DesktopSearch() {
+  const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Press "/" anywhere (outside a text field) to jump to the desktop search.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const input = inputRef.current;
+      if (!input || input.offsetParent === null) return;
+      e.preventDefault();
+      input.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  return (
+    <form action="/search" role="search" className="hidden max-w-2xl flex-1 md:block">
+      <div className="group/search flex h-11 items-center gap-1 rounded-2xl border border-border bg-surface-hover/60 p-1 pl-1 transition-all duration-200 hover:border-ink-muted/30 focus-within:border-brand/60 focus-within:bg-surface focus-within:shadow-[0_0_0_1px_rgb(var(--brand)/0.08)]">
+        <LocationPicker variant="desktop" />
+        <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border" />
+        <Search
+          size={17}
+          strokeWidth={2.4}
+          className="shrink-0 text-ink-muted transition-colors group-focus-within/search:text-brand"
+        />
+        <div className="relative h-full min-w-0 flex-1">
+          <input
+            ref={inputRef}
+            name="q"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search products, services, jobs"
+            className="h-full w-full bg-transparent px-2.5 text-sm text-ink focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+          />
+          <AnimatedSearchPlaceholder hidden={query.length > 0} className="left-2.5 right-2.5" />
+        </div>
+        {query ? (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery('');
+              inputRef.current?.focus();
+            }}
+            aria-label="Clear search"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
+          >
+            <X size={15} />
+          </button>
+        ) : (
+          <kbd
+            className="hidden h-6 shrink-0 items-center rounded-md border border-border bg-surface px-1.5 font-sans text-[11px] font-semibold text-ink-muted lg:flex"
+            title="Press / to search"
+          >
+            /
+          </kbd>
+        )}
+        <button
+          type="submit"
+          aria-label="Search"
+          className="flex h-full shrink-0 items-center gap-1.5 rounded-xl bg-brand px-3 text-sm font-semibold text-brand-ink shadow-sm transition-all hover:brightness-110 active:scale-[0.97] lg:px-4"
+        >
+          <span className="hidden lg:inline">Search</span>
+          <ArrowRight size={16} strokeWidth={2.4} className="lg:hidden" />
+        </button>
+      </div>
+    </form>
+  );
+});
+
+const MobileSearch = memo(function MobileSearch() {
+  const [query, setQuery] = useState('');
+  return (
+    <form action="/search" className="mb-4">
+      <div className="flex h-11 items-stretch overflow-hidden rounded-full border border-border bg-bg transition-all focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/10">
+        <span className="flex w-12 shrink-0 items-center justify-center bg-gradient-to-br from-brand to-brand/80 text-brand-ink">
+          <Search size={18} strokeWidth={2.5} />
+        </span>
+        <div className="relative min-w-0 flex-1">
+          <input
+            name="q"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search products, services, jobs"
+            className="h-full w-full bg-transparent px-4 text-sm text-ink focus:outline-none"
+          />
+          <AnimatedSearchPlaceholder hidden={query.length > 0} className="left-4 right-4" />
+        </div>
+      </div>
+    </form>
+  );
+});
+
+/** Desktop row of Cloude chips under the search bar. */
+const CloudeStrip = memo(function CloudeStrip({ pathname }: { pathname: string | null }) {
+  return (
+    <div className="no-scrollbar mx-auto flex max-w-7xl gap-2 overflow-x-auto px-6 py-2.5 text-sm [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)]">
+      <Link href="/" className={`${chipBase} ${pathname === '/' ? chipActive : chipIdle}`}>
+        <LayoutGrid
+          size={14}
+          className={pathname === '/' ? 'text-brand-ink' : 'text-ink-muted transition-colors group-hover:text-brand'}
+        />
+        All
+      </Link>
+      {cloudes.map((c) => {
+        const active = isCloudeActive(pathname, c.slug);
+        return (
+          <Link key={c.slug} href={`/cloudes/${c.slug}`} className={`${chipBase} ${active ? chipActive : chipIdle}`}>
+            <Icon
+              name={c.icon}
+              size={14}
+              className={active ? 'text-brand-ink' : `${iconColor(c.slug)} transition-transform group-hover:scale-110`}
+            />
+            {c.name.replace(' Cloude', '')}
+          </Link>
+        );
+      })}
+    </div>
+  );
+});
+
+const mobileTile = 'flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors';
+const mobileTileActive = 'border-brand bg-brand-soft text-brand';
+const mobileTileIdle = 'border-border text-ink-muted hover:border-brand hover:bg-brand-soft hover:text-brand';
+
+/** Two-column Cloude grid in the mobile menu. */
+const MobileCloudeGrid = memo(function MobileCloudeGrid({ pathname }: { pathname: string | null }) {
+  return (
+    <div className="mb-4 grid grid-cols-2 gap-2">
+      <Link href="/" className={`${mobileTile} ${pathname === '/' ? mobileTileActive : mobileTileIdle}`}>
+        <LayoutGrid size={15} className={pathname === '/' ? 'text-brand' : 'text-ink-muted/70'} />
+        <span className="flex-1 truncate">All</span>
+        <ChevronRight size={14} className="shrink-0 opacity-50" />
+      </Link>
+      {cloudes.map((c) => (
+        <Link
+          key={c.slug}
+          href={`/cloudes/${c.slug}`}
+          className={`${mobileTile} ${isCloudeActive(pathname, c.slug) ? mobileTileActive : mobileTileIdle}`}
+        >
+          <Icon name={c.icon} size={15} className={iconColor(c.slug)} />
+          <span className="flex-1 truncate">{c.name.replace(' Cloude', '')}</span>
+          <ChevronRight size={14} className="shrink-0 opacity-50" />
+        </Link>
+      ))}
+    </div>
+  );
+});
+
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [desktopQuery, setDesktopQuery] = useState('');
-  const [mobileQuery, setMobileQuery] = useState('');
   const headerRef = useRef<HTMLElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-  const desktopSearchRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, logout, requireAuth } = useAuth();
   const { count: bucketCount } = useCart();
 
-  function handlePostAdClick(e: React.MouseEvent) {
-    e.preventDefault();
-    requireAuth(() => {
-      startTopLoader('/post-ad');
-      router.push('/post-ad');
-    }, 'post-ad');
-  }
+  const handlePostAdClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      requireAuth(() => {
+        startTopLoader('/post-ad');
+        router.push('/post-ad');
+      }, 'post-ad');
+    },
+    [requireAuth, router],
+  );
 
-  function handleLogout() {
+  const handleLogout = useCallback(() => {
     logout();
     setProfileOpen(false);
     startTopLoader('/');
     router.push('/');
-  }
+  }, [logout, router]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -87,21 +254,6 @@ export function Navbar() {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [profileOpen]);
-
-  // Press "/" anywhere (outside a text field) to jump to the desktop search.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      const input = desktopSearchRef.current;
-      if (!input || input.offsetParent === null) return;
-      e.preventDefault();
-      input.focus();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
 
   useEffect(() => {
     const el = headerRef.current;
@@ -140,57 +292,7 @@ export function Navbar() {
         </Link>
 
         {/* Search — desktop */}
-        <form action="/search" role="search" className="hidden max-w-2xl flex-1 md:block">
-          <div className="group/search flex h-11 items-center gap-1 rounded-2xl border border-border bg-surface-hover/60 p-1 pl-1 transition-all duration-200 hover:border-ink-muted/30 focus-within:border-brand/60 focus-within:bg-surface focus-within:shadow-[0_0_0_1px_rgb(var(--brand)/0.08)]">
-            <LocationPicker variant="desktop" />
-            <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border" />
-            <Search
-              size={17}
-              strokeWidth={2.4}
-              className="shrink-0 text-ink-muted transition-colors group-focus-within/search:text-brand"
-            />
-            <div className="relative h-full min-w-0 flex-1">
-              <input
-                ref={desktopSearchRef}
-                name="q"
-                type="search"
-                value={desktopQuery}
-                onChange={(e) => setDesktopQuery(e.target.value)}
-                aria-label="Search products, services, jobs"
-                className="h-full w-full bg-transparent px-2.5 text-sm text-ink focus:outline-none [&::-webkit-search-cancel-button]:hidden"
-              />
-              <AnimatedSearchPlaceholder hidden={desktopQuery.length > 0} className="left-2.5 right-2.5" />
-            </div>
-            {desktopQuery ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setDesktopQuery('');
-                  desktopSearchRef.current?.focus();
-                }}
-                aria-label="Clear search"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
-              >
-                <X size={15} />
-              </button>
-            ) : (
-              <kbd
-                className="hidden h-6 shrink-0 items-center rounded-md border border-border bg-surface px-1.5 font-sans text-[11px] font-semibold text-ink-muted lg:flex"
-                title="Press / to search"
-              >
-                /
-              </kbd>
-            )}
-            <button
-              type="submit"
-              aria-label="Search"
-              className="flex h-full shrink-0 items-center gap-1.5 rounded-xl bg-brand px-3 text-sm font-semibold text-brand-ink shadow-sm transition-all hover:brightness-110 active:scale-[0.97] lg:px-4"
-            >
-              <span className="hidden lg:inline">Search</span>
-              <ArrowRight size={16} strokeWidth={2.4} className="lg:hidden" />
-            </button>
-          </div>
-        </form>
+        <DesktopSearch />
 
         <div className="ml-auto flex shrink-0 items-center gap-2 lg:gap-3">
           <button
@@ -329,43 +431,7 @@ export function Navbar() {
 
       {/* Cloude strip — desktop */}
       <nav className="relative hidden border-t border-border/70 md:block">
-        <div className="no-scrollbar mx-auto flex max-w-7xl gap-2 overflow-x-auto px-6 py-2.5 text-sm [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)]">
-          <Link
-            href="/"
-            className={`group flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
-              pathname === '/'
-                ? 'border-brand bg-brand text-brand-ink shadow-[0_2px_8px_-2px_rgb(var(--brand)/calc(0.5*var(--glow)))]'
-                : 'border-border bg-surface text-ink-muted hover:border-brand hover:bg-brand-soft hover:text-brand'
-            }`}
-          >
-            <LayoutGrid
-              size={14}
-              className={pathname === '/' ? 'text-brand-ink' : 'text-ink-muted transition-colors group-hover:text-brand'}
-            />
-            All
-          </Link>
-          {cloudes.map((c) => {
-            const active = pathname === `/cloudes/${c.slug}` || pathname?.startsWith(`/cloudes/${c.slug}/`);
-            return (
-              <Link
-                key={c.slug}
-                href={`/cloudes/${c.slug}`}
-                className={`group flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
-                  active
-                    ? 'border-brand bg-brand text-brand-ink shadow-[0_2px_8px_-2px_rgb(var(--brand)/calc(0.5*var(--glow)))]'
-                    : 'border-border bg-surface text-ink-muted hover:border-brand hover:bg-brand-soft hover:text-brand'
-                }`}
-              >
-                <Icon
-                  name={c.icon}
-                  size={14}
-                  className={active ? 'text-brand-ink' : `${iconColor(c.slug)} transition-transform group-hover:scale-110`}
-                />
-                {c.name.replace(' Cloude', '')}
-              </Link>
-            );
-          })}
-        </div>
+        <CloudeStrip pathname={pathname} />
       </nav>
 
       {/* Mobile menu */}
@@ -377,56 +443,8 @@ export function Navbar() {
         <div className="min-h-0 px-4">
           <div className="animate-slide-down py-4">
             <LocationPicker variant="mobile" />
-            <form action="/search" className="mb-4">
-              <div className="flex h-11 items-stretch overflow-hidden rounded-full border border-border bg-bg transition-all focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/10">
-                <span className="flex w-12 shrink-0 items-center justify-center bg-gradient-to-br from-brand to-brand/80 text-brand-ink">
-                  <Search size={18} strokeWidth={2.5} />
-                </span>
-                <div className="relative min-w-0 flex-1">
-                  <input
-                    name="q"
-                    type="search"
-                    value={mobileQuery}
-                    onChange={(e) => setMobileQuery(e.target.value)}
-                    aria-label="Search products, services, jobs"
-                    className="h-full w-full bg-transparent px-4 text-sm text-ink focus:outline-none"
-                  />
-                  <AnimatedSearchPlaceholder hidden={mobileQuery.length > 0} className="left-4 right-4" />
-                </div>
-              </div>
-            </form>
-            <div className="mb-4 grid grid-cols-2 gap-2">
-              <Link
-                href="/"
-                className={`flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
-                  pathname === '/'
-                    ? 'border-brand bg-brand-soft text-brand'
-                    : 'border-border text-ink-muted hover:border-brand hover:bg-brand-soft hover:text-brand'
-                }`}
-              >
-                <LayoutGrid size={15} className={pathname === '/' ? 'text-brand' : 'text-ink-muted/70'} />
-                <span className="flex-1 truncate">All</span>
-                <ChevronRight size={14} className="shrink-0 opacity-50" />
-              </Link>
-              {cloudes.map((c) => {
-                const active = pathname === `/cloudes/${c.slug}` || pathname?.startsWith(`/cloudes/${c.slug}/`);
-                return (
-                  <Link
-                    key={c.slug}
-                    href={`/cloudes/${c.slug}`}
-                    className={`flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
-                      active
-                        ? 'border-brand bg-brand-soft text-brand'
-                        : 'border-border text-ink-muted hover:border-brand hover:bg-brand-soft hover:text-brand'
-                    }`}
-                  >
-                    <Icon name={c.icon} size={15} className={iconColor(c.slug)} />
-                    <span className="flex-1 truncate">{c.name.replace(' Cloude', '')}</span>
-                    <ChevronRight size={14} className="shrink-0 opacity-50" />
-                  </Link>
-                );
-              })}
-            </div>
+            <MobileSearch />
+            <MobileCloudeGrid pathname={pathname} />
             {!loading && user?.role === 'ADMIN' && (
               <Link
                 href="/admin"

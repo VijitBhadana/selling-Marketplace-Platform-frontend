@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useChat } from '@/lib/chat-context';
 import { api, ApiError } from '@/lib/api';
 import { withImageParams } from '@/lib/image-utils';
+import { useVisibleInterval } from '@/lib/use-visible-interval';
 import { ListRowsSkeleton } from './skeleton';
 import { navBadgeClass, navIconButtonClass } from './nav-icon-button';
 
@@ -50,26 +51,18 @@ export const SellerInboxMenu = memo(function SellerInboxMenu() {
 
   const isSeller = user?.role === 'SELLER';
 
-  useEffect(() => {
-    if (!isSeller || !token) return;
-    let cancelled = false;
-
-    async function poll() {
-      try {
-        const data = await api.messages.unreadCount(token!);
-        if (!cancelled) setUnreadCount(data.count ?? 0);
-      } catch {
-        // transient — next poll retries
-      }
-    }
-
-    poll();
-    const interval = setInterval(poll, UNREAD_POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [isSeller, token]);
+  useVisibleInterval(
+    (isStale) => {
+      api.messages
+        .unreadCount(token!)
+        .then((data) => !isStale() && setUnreadCount(data.count ?? 0))
+        .catch(() => {
+          // transient — next poll retries
+        });
+    },
+    UNREAD_POLL_MS,
+    isSeller ? token : null,
+  );
 
   useEffect(() => {
     if (!open || !token) return;

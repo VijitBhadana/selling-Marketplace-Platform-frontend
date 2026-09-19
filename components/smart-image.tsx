@@ -20,7 +20,15 @@ export function SmartImage({
 }) {
   if (src.startsWith('data:') || src.startsWith('blob:')) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={alt} className={`absolute inset-0 h-full w-full ${className ?? ''}`} />;
+    return (
+      <img
+        src={src}
+        alt={alt}
+        loading={priority ? undefined : 'lazy'}
+        decoding="async"
+        className={`absolute inset-0 h-full w-full ${className ?? ''}`}
+      />
+    );
   }
   return <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className={className} />;
 }

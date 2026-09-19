@@ -21,7 +21,8 @@ import { SITE_DESCRIPTION, SITE_DOMAIN, SITE_KEYWORDS, SITE_NAME, SITE_TAGLINE, 
 const display = Manrope({ subsets: ['latin'], variable: '--font-display', weight: ['600', '700', '800'] });
 const body = Inter({ subsets: ['latin'], variable: '--font-body' });
 const hero = Space_Grotesk({ subsets: ['latin'], variable: '--font-hero', weight: ['500', '600', '700'] });
-const openSans = Open_Sans({ subsets: ['latin'], variable: '--font-open-sans' });
+// Only the shop and bucket-list pages use Open Sans — not preloaded on every other page.
+const openSans = Open_Sans({ subsets: ['latin'], variable: '--font-open-sans', preload: false });
 
 const defaultTitle = `${SITE_NAME} — ${SITE_TAGLINE}`;
 const defaultOgImage = ogImageUrl(SITE_TAGLINE, 'Buy, sell, hire & book — every local business, one place.');

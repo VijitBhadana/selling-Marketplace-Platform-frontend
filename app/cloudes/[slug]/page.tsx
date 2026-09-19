@@ -103,21 +103,22 @@ export default async function CloudePage({ params, searchParams }: Props) {
     const location = getUserLocation();
     const city = location?.city;
     const near = nearParams(location);
-    const dbJobs =
+    // Jobs and shops are independent — fetched in parallel rather than one after the other.
+    const [dbJobs, dbListings] = await Promise.all([
       isJobBoard || alsoJobs
-        ? await api.jobs
+        ? api.jobs
             .list({ cloudeSlug: cloude.slug, categorySlug: activeCategory?.slug, pageSize: 48, ...near })
             .catch(() => null)
-        : null;
+        : null,
+      // Real, backend-saved listings — shared across every visitor regardless of
+      // who posted them. Omitting categorySlug returns shops from every category.
+      isJobBoard
+        ? null
+        : api.listings
+            .list({ cloudeSlug: cloude.slug, categorySlug: activeCategory?.slug, pageSize: activeCategory ? 24 : 48, ...near })
+            .catch(() => null),
+    ]);
     const jobs: Job[] = dbJobs?.items ?? [];
-
-    // Real, backend-saved listings — shared across every visitor regardless of
-    // who posted them. Omitting categorySlug returns shops from every category.
-    const dbListings = isJobBoard
-      ? null
-      : await api.listings
-          .list({ cloudeSlug: cloude.slug, categorySlug: activeCategory?.slug, pageSize: activeCategory ? 24 : 48, ...near })
-          .catch(() => null);
 
     const dbItems: StaticShopCardItem[] = (dbListings?.items ?? []).map((l: any) => ({
       id: l.id,

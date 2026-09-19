@@ -6,14 +6,15 @@ import { api } from './api';
 import { FINANCE_STATUS_LABELS, type MyFinanceApplication } from './finance-details';
 
 // The signed-in buyer's finance applications keyed by productId, so a scheme card can show
-// "Applied" / "Under review" / "Approved" in place of the Apply button.
-export function useMyFinanceApplications() {
+// "Applied" / "Under review" / "Approved" in place of the Apply button. `enabled: false`
+// (every shop outside the Financing Cloude) skips the request entirely.
+export function useMyFinanceApplications(enabled = true) {
   const { token } = useAuth();
   const [byProduct, setByProduct] = useState<Record<string, MyFinanceApplication>>({});
 
   useEffect(() => {
-    if (!token) {
-      setByProduct({});
+    if (!token || !enabled) {
+      setByProduct((prev) => (Object.keys(prev).length ? {} : prev));
       return;
     }
     let cancelled = false;
@@ -28,7 +29,7 @@ export function useMyFinanceApplications() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, enabled]);
 
   const markApplied = useCallback((application: MyFinanceApplication) => {
     setByProduct((prev) => ({ ...prev, [application.productId]: application }));
