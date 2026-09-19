@@ -13,7 +13,7 @@ export const ThemeToggle = memo(function ThemeToggle({ bare = false }: { bare?: 
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <div className={`h-9 w-9 rounded-full ${bare ? '' : 'border border-border'}`} aria-hidden />;
+    return <div className={`rounded-full ${bare ? 'h-8 w-8 md:h-9 md:w-9' : 'h-9 w-9 border border-border'}`} aria-hidden />;
   }
 
   const isDark = resolvedTheme === 'dark';
@@ -23,7 +23,8 @@ export const ThemeToggle = memo(function ThemeToggle({ bare = false }: { bare?: 
       type="button"
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-      className={`${navIconButtonClass()} ${bare ? '' : 'border border-border bg-surface'}`}
+      // Outside the navbar (admin) it keeps its full size on phones too.
+      className={`${navIconButtonClass()} ${bare ? '' : 'border border-border bg-surface max-md:h-9 max-md:w-9'}`}
     >
       <span key={isDark ? 'sun' : 'moon'} className="animate-fade-in-up">
         {isDark ? <Sun size={17} /> : <Moon size={17} />}

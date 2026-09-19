@@ -18,10 +18,19 @@ const AUDIENCE_LABEL: Record<AdAudience, string> = { ALL: 'Everyone', BUYER: 'Bu
 
 const labelClass = 'mb-1.5 block text-xs font-semibold text-ink-muted';
 
-/** Posts a shop / service advertisement that pops up for buyers and sellers, and lists the ones running. */
-export function AdvertisementDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** Posts a shop / service advertisement that pops up for buyers and sellers, and lists the ones running so they can be removed. */
+export function AdvertisementDialog({
+  open,
+  onClose,
+  initialView = 'create',
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Which tab it opens on — the form, or the posted list (to remove a running ad). */
+  initialView?: 'create' | 'posted';
+}) {
   const { token } = useAuth();
-  const [view, setView] = useState<'create' | 'posted'>('create');
+  const [view, setView] = useState<'create' | 'posted'>(initialView);
   const [kind, setKind] = useState<Kind>('SHOP');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -67,7 +76,7 @@ export function AdvertisementDialog({ open, onClose }: { open: boolean; onClose:
   useEffect(() => {
     if (!open) return;
     resetForm();
-    setView('create');
+    setView(initialView);
     setBusy(false);
     setAds(null);
     setConfirmId(null);
@@ -75,7 +84,7 @@ export function AdvertisementDialog({ open, onClose }: { open: boolean; onClose:
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCloseRef.current();
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [open, loadAds]);
+  }, [open, loadAds, initialView]);
 
   if (!open) return null;
 
@@ -136,7 +145,7 @@ export function AdvertisementDialog({ open, onClose }: { open: boolean; onClose:
       setAds((list) => list?.filter((a) => a.id !== id) ?? null);
       setConfirmId(null);
     } catch (err) {
-      setListError(err instanceof ApiError ? err.message : 'Could not take the advertisement down.');
+      setListError(err instanceof ApiError ? err.message : 'Could not remove the advertisement.');
     } finally {
       setRemovingId(null);
     }
@@ -282,7 +291,7 @@ export function AdvertisementDialog({ open, onClose }: { open: boolean; onClose:
 
         <div className="min-w-0">
           <p className={labelClass}>Live preview</p>
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 via-slate-900 to-black px-7 pb-3 pt-8">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 via-slate-900 to-black p-7">
             <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/3 h-48 w-48 -translate-x-1/2 rounded-full bg-brand/30 blur-3xl" />
             <AdvertisementCard
               ad={{ kind, name: name.trim(), description: description.trim(), imageUrl, linkUrl: linkInvalid ? null : link }}
@@ -421,18 +430,17 @@ export function AdvertisementDialog({ open, onClose }: { open: boolean; onClose:
                       disabled={removingId === ad.id}
                       className="flex h-8 items-center gap-1.5 rounded-lg bg-red-600 px-2.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
                     >
-                      {removingId === ad.id && <Loader2 size={13} className="animate-spin" />} Take down
+                      {removingId === ad.id && <Loader2 size={13} className="animate-spin" />} Remove
                     </button>
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setConfirmId(ad.id)}
-                    aria-label={`Take down ${ad.name}`}
-                    title="Take down"
-                    className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                    aria-label={`Remove ${ad.name}`}
+                    className="ml-auto flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-red-500/30 px-2.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={14} /> Remove
                   </button>
                 )}
               </li>

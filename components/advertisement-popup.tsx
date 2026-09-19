@@ -103,7 +103,7 @@ export function AdvertisementPopup() {
   const closeOnBackdrop = (e: React.MouseEvent) => e.target === e.currentTarget && close();
 
   return (
-    <div className="ad3d-fade fixed inset-0 z-[70] overflow-y-auto bg-black/65 backdrop-blur-md" onMouseDown={closeOnBackdrop}>
+    <div className="ad-fade fixed inset-0 z-[70] overflow-y-auto bg-black/65 backdrop-blur-md" onMouseDown={closeOnBackdrop}>
       <div
         aria-hidden
         className="pointer-events-none fixed left-1/2 top-1/2 h-[70vmin] w-[70vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/25 blur-[110px]"
@@ -114,7 +114,7 @@ export function AdvertisementPopup() {
           aria-modal="true"
           aria-labelledby="ad-popup-title"
           aria-roledescription="advertisement"
-          className="relative w-full max-w-[360px]"
+          className="relative w-full max-w-[440px]"
           onTouchStart={(e) => (swipeX.current = e.touches[0].clientX)}
           onTouchEnd={(e) => {
             if (swipeX.current === null || ads.length < 2) return;
@@ -127,14 +127,14 @@ export function AdvertisementPopup() {
             key={ad.id}
             ad={ad}
             titleId="ad-popup-title"
-            enterClass={flipped ? 'ad3d-swap' : 'ad3d-enter'}
+            enterClass={flipped ? 'ad-swap' : 'ad-enter'}
             onClose={close}
             onAction={visit}
             closeButtonRef={closeRef}
           />
 
           {ads.length > 1 && (
-            <div className="mt-1 flex items-center justify-center gap-4">
+            <div className="mt-5 flex items-center justify-center gap-4">
               <button
                 type="button"
                 onClick={() => go(-1)}

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ShopCard } from './shop-card';
+import { ShopCard, type ShopCardProps } from './shop-card';
+import { useCloudeBrowse, useCloudeQuery } from './cloude-browse';
 import { getPostedListingsFor, getPostedListingsForCloude, removePostedListing } from '@/lib/posted-listings';
 
 // Loose identity check for "is this local draft the same shop as a real backend
@@ -11,15 +12,7 @@ function shopSignature(shopName: string, city?: string) {
   return `${shopName.trim().toLowerCase()}|${(city ?? '').trim().toLowerCase()}`;
 }
 
-export type StaticShopCardItem = {
-  id: string;
-  shopName: string;
-  categoryName: string;
-  description?: string;
-  image: string;
-  city?: string;
-  isNew?: boolean;
-};
+export type StaticShopCardItem = ShopCardProps;
 
 export function CategoryShopGrid({
   cloudeSlug,
@@ -27,6 +20,7 @@ export function CategoryShopGrid({
   categoryName,
   staticItems,
   postAdHref,
+  mobileHeading,
 }: {
   cloudeSlug: string;
   /** Omit to show shops from every category in the Cloude. */
@@ -34,8 +28,12 @@ export function CategoryShopGrid({
   categoryName: string;
   staticItems: StaticShopCardItem[];
   postAdHref: string;
+  /** Section title above the cards on phones (the desktop page header covers it). */
+  mobileHeading?: { title: string; subtitle: string };
 }) {
   const [postedItems, setPostedItems] = useState<StaticShopCardItem[]>([]);
+  const query = useCloudeQuery();
+  const { setQuery } = useCloudeBrowse();
 
   useEffect(() => {
     const posted = categorySlug
@@ -66,6 +64,16 @@ export function CategoryShopGrid({
   }, [cloudeSlug, categorySlug, staticItems]);
 
   const allItems = useMemo(() => [...postedItems, ...staticItems], [postedItems, staticItems]);
+  // The phone search bar on the Cloude page narrows the cards as you type.
+  const shownItems = useMemo(
+    () =>
+      query
+        ? allItems.filter((it) =>
+            [it.shopName, it.categoryName, it.description, it.city].some((f) => f?.toLowerCase().includes(query)),
+          )
+        : allItems,
+    [allItems, query],
+  );
 
   if (allItems.length === 0) {
     return (
@@ -80,10 +88,35 @@ export function CategoryShopGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:[grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
-      {allItems.map((item) => (
-        <ShopCard key={item.id} {...item} />
-      ))}
-    </div>
+    <>
+      {mobileHeading && (
+        <div className="mb-3 flex items-end justify-between gap-3 md:hidden">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-1.5 font-display text-base font-bold leading-tight text-ink">
+              {mobileHeading.title}
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand shadow-[0_0_8px_rgb(var(--brand))]" />
+            </h2>
+            <p className="mt-0.5 truncate text-xs text-ink-muted">{mobileHeading.subtitle}</p>
+          </div>
+          <span className="shrink-0 text-xs font-semibold text-brand">
+            {shownItems.length} {shownItems.length === 1 ? 'store' : 'stores'}
+          </span>
+        </div>
+      )}
+      {shownItems.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-ink-muted">
+          No stores match “{query}”.{' '}
+          <button type="button" onClick={() => setQuery('')} className="font-medium text-brand hover:underline">
+            Clear search
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:[grid-template-columns:repeat(auto-fill,minmax(240px,1fr))] md:gap-4">
+          {shownItems.map((item) => (
+            <ShopCard key={item.id} {...item} cloudeSlug={cloudeSlug} />
+          ))}
+        </div>
+      )}
+    </>
   );
 }

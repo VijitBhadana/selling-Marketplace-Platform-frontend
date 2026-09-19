@@ -25,6 +25,7 @@ import {
   ShoppingBag,
   Sparkles,
   Store,
+  Trash2,
   TrendingUp,
   UserPlus,
   Users,
@@ -119,6 +120,7 @@ export function OverviewSection({
   onNavigate,
   onAnnounce,
   onAdvertise,
+  onRemoveAdvert,
   refreshKey,
 }: {
   days: RangeDays;
@@ -127,6 +129,7 @@ export function OverviewSection({
   onNavigate: (tab: string) => void;
   onAnnounce: () => void;
   onAdvertise: () => void;
+  onRemoveAdvert: () => void;
   refreshKey: number;
 }) {
   const { token } = useAuth();
@@ -321,6 +324,13 @@ export function OverviewSection({
                 className="flex h-10 items-center gap-2 rounded-xl border border-brand/40 bg-brand-soft px-4 text-sm font-semibold text-brand shadow-sm transition hover:border-brand hover:bg-brand hover:text-brand-ink active:scale-[0.98]"
               >
                 <Sparkles size={16} /> New Advertisement
+              </button>
+              <button
+                type="button"
+                onClick={onRemoveAdvert}
+                className="flex h-10 items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 text-sm font-semibold text-red-600 shadow-sm transition hover:border-red-600 hover:bg-red-600 hover:text-white active:scale-[0.98] dark:text-red-400 dark:hover:text-white"
+              >
+                <Trash2 size={16} /> Remove Advertisement
               </button>
             </div>
           </div>

@@ -69,6 +69,26 @@ export function saveLocation(loc: UserLocation | null) {
   window.dispatchEvent(new CustomEvent(LOCATION_CHANGE_EVENT, { detail: loc }));
 }
 
+/** Straight-line km from the visitor to a shop, or undefined when either has no coordinates. */
+export function distanceKm(
+  from: UserLocation | null | undefined,
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+): number | undefined {
+  if (from?.lat == null || from.lng == null || lat == null || lng == null) return undefined;
+  const rad = Math.PI / 180;
+  const dLat = (lat - from.lat) * rad;
+  const dLng = (lng - from.lng) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(from.lat * rad) * Math.cos(lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** "800 m" / "1.4 km" / "12 km". */
+export function formatDistance(km: number) {
+  if (km < 1) return `${Math.max(50, Math.round((km * 1000) / 50) * 50)} m`;
+  return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
+}
+
 /** True the first time it's called in this browser — gates the automatic permission prompt. */
 export function shouldAutoPrompt() {
   try {

@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Sparkles,
   Store,
+  Trash2,
   UserRound,
   Users,
 } from 'lucide-react';
@@ -51,6 +52,7 @@ type TabId = (typeof TABS)[number]['id'];
 const QUICK_ACTIONS = [
   { id: 'announce', label: 'Send announcement', icon: Megaphone },
   { id: 'advertise', label: 'Post advertisement', icon: Sparkles },
+  { id: 'remove-ad', label: 'Remove advertisement', icon: Trash2 },
   { id: 'users', label: 'Manage users', icon: Users },
   { id: 'subscriptions', label: 'Review subscriptions', icon: CreditCard },
   { id: 'theme', label: 'Change brand colour', icon: Palette },
@@ -80,7 +82,8 @@ function AdminPanel() {
   const [days, setDays] = useState<RangeDays>(30);
   const [search, setSearch] = useState('');
   const [announceOpen, setAnnounceOpen] = useState(false);
-  const [advertOpen, setAdvertOpen] = useState(false);
+  // Which tab the advertisement dialog is open on — the form, or the posted list to remove one.
+  const [advertView, setAdvertView] = useState<'create' | 'posted' | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const quickRef = useRef<HTMLDivElement>(null);
@@ -134,8 +137,9 @@ function AdminPanel() {
   const bumpRefresh = useCallback(() => setRefreshKey((k) => k + 1), []);
   const openAnnounce = useCallback(() => setAnnounceOpen(true), []);
   const closeAnnounce = useCallback(() => setAnnounceOpen(false), []);
-  const openAdvert = useCallback(() => setAdvertOpen(true), []);
-  const closeAdvert = useCallback(() => setAdvertOpen(false), []);
+  const openAdvert = useCallback(() => setAdvertView('create'), []);
+  const openPostedAds = useCallback(() => setAdvertView('posted'), []);
+  const closeAdvert = useCallback(() => setAdvertView(null), []);
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -145,7 +149,8 @@ function AdminPanel() {
   function quickAction(id: (typeof QUICK_ACTIONS)[number]['id']) {
     setQuickOpen(false);
     if (id === 'announce') setAnnounceOpen(true);
-    else if (id === 'advertise') setAdvertOpen(true);
+    else if (id === 'advertise') setAdvertView('create');
+    else if (id === 'remove-ad') setAdvertView('posted');
     else goTo(id);
   }
 
@@ -344,6 +349,7 @@ function AdminPanel() {
               onNavigate={goTo}
               onAnnounce={openAnnounce}
               onAdvertise={openAdvert}
+              onRemoveAdvert={openPostedAds}
               refreshKey={refreshKey}
             />
           )}
@@ -358,7 +364,7 @@ function AdminPanel() {
       {/* Mounted only while open, so their chunks load on first use. */}
       {openUserId && <UserDetailDrawer userId={openUserId} onClose={closeUser} onChanged={bumpRefresh} />}
       {announceOpen && <AnnouncementDialog open onClose={closeAnnounce} />}
-      {advertOpen && <AdvertisementDialog open onClose={closeAdvert} />}
+      {advertView && <AdvertisementDialog open initialView={advertView} onClose={closeAdvert} />}
     </div>
   );
 }

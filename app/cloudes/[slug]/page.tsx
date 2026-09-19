@@ -2,17 +2,18 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, MapPin, Users } from 'lucide-react';
+import { ArrowLeft, MapPin, Plus, Users } from 'lucide-react';
 import { cloudes, getCloudeBySlug, slugify, type Cloude, type CloudeCategory } from '@/lib/cloudes-data';
 import { sampleListings } from '@/lib/sample-listings';
 import { ListingCard } from '@/components/listing-card';
 import { Icon } from '@/components/icon';
 import { CategoryShopGrid, type StaticShopCardItem } from '@/components/posted-shop-cards';
+import { CloudeBrowseProvider, CloudeCategoryPanel, CloudeSearchBar } from '@/components/cloude-browse';
 import { JobBoard } from '@/components/job-board';
 import type { Job } from '@/lib/jobs';
 import { JsonLd } from '@/components/json-ld';
 import { api } from '@/lib/api';
-import { nearParams } from '@/lib/user-location';
+import { distanceKm, nearParams } from '@/lib/user-location';
 import { getUserLocation } from '@/lib/user-location-server';
 import { FALLBACK_LISTING_IMAGE } from '@/lib/image-utils';
 import { breadcrumbJsonLd, ogImageUrl, pageMetadata, type JsonLdNode } from '@/lib/seo';
@@ -128,6 +129,9 @@ export default async function CloudePage({ params, searchParams }: Props) {
       image: l.coverImageUrl || FALLBACK_LISTING_IMAGE,
       city: l.city ?? undefined,
       isNew: Date.now() - new Date(l.createdAt).getTime() < 24 * 60 * 60 * 1000,
+      rating: l.rating,
+      verified: !!(l.seller?.isEmailVerified || l.seller?.isPhoneVerified),
+      distanceKm: distanceKm(location, l.latitude, l.longitude),
     }));
 
     // Static demo listings — only shown as filler when nothing real exists yet, and never
@@ -151,148 +155,140 @@ export default async function CloudePage({ params, searchParams }: Props) {
       ? jobs.map((j) => ({ name: j.title, path: `/jobs/${j.id}` }))
       : [...dbItems.map(shopListItem), ...jobs.map((j) => ({ name: j.title, path: `/jobs/${j.id}` }))];
 
+    const shortName = cloude.name.replace(' Cloude', '');
+
     return (
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <JsonLd data={cloudeJsonLd(cloude, activeCategory, jsonLdItems)} />
-        <nav className="mb-4 text-sm text-ink-muted">
-          <Link href="/" className="hover:text-brand">Home</Link>
-          <span className="mx-1.5">/</span>
-          {activeCategory ? (
-            <>
-              <Link href={`/cloudes/${cloude.slug}`} className="hover:text-brand">{cloude.name}</Link>
-              <span className="mx-1.5">/</span>
-              <span className="text-ink">{activeCategory.name}</span>
-            </>
-          ) : (
-            <span className="text-ink">{cloude.name}</span>
-          )}
-        </nav>
-
-        <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-border bg-surface p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand">
-              <Icon name={cloude.icon} size={26} />
-            </span>
-            <div>
-              <h1 className="font-display text-2xl font-bold text-ink">{activeCategory ? activeCategory.name : cloude.name}</h1>
-              <p className="mt-1 text-sm text-ink-muted">
-                {activeCategory ? `${isJobBoard ? 'Jobs' : 'Shops'} in ${activeCategory.name}` : cloude.description}
-              </p>
-            </div>
-          </div>
-          <Link
-            href={postAdHref}
-            className="shrink-0 rounded-full bg-brand px-5 py-2.5 text-center text-sm font-semibold text-brand-ink hover:opacity-90"
-          >
-            {activeCategory
-              ? `${isJobBoard ? 'Post a job' : 'Post your shop'} in ${activeCategory.name}`
-              : `Post in ${cloude.name.replace(' Cloude', '')}`}
-          </Link>
-        </div>
-
-        <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
-          <aside className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start">
-            <div className="shrink-0 bg-brand/15 px-4 py-3">
-              <h2 className="text-sm font-semibold text-brand">Categories</h2>
-            </div>
-            <ul className="no-scrollbar flex flex-wrap gap-2 overflow-y-auto p-4 lg:min-h-0 lg:flex-col lg:flex-nowrap lg:gap-1.5">
-              <li className="max-w-full shrink-0">
-                <Link
-                  href={`/cloudes/${cloude.slug}`}
-                  className={`block rounded-lg border px-3 py-2 text-sm transition-colors lg:px-3 ${
-                    !activeCategory
-                      ? 'border-brand bg-brand-soft font-semibold text-brand'
-                      : 'border-border bg-surface text-ink-muted hover:border-brand hover:text-brand lg:border-transparent lg:bg-transparent'
-                  }`}
-                >
-                  {isJobBoard ? 'All Jobs' : 'All Shops'}
-                </Link>
-              </li>
-              {cloude.categories.map((cat) => (
-                <li key={cat.slug} className="max-w-full shrink-0 break-words">
-                  <Link
-                    href={`/cloudes/${cloude.slug}?category=${cat.slug}`}
-                    className={`block rounded-lg border px-3 py-2 text-sm transition-colors lg:px-3 ${
-                      activeCategory?.slug === cat.slug
-                        ? 'border-brand bg-brand-soft font-semibold text-brand'
-                        : 'border-border bg-surface text-ink-muted hover:border-brand hover:text-brand lg:border-transparent lg:bg-transparent'
-                    }`}
-                  >
-                    {cat.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </aside>
-
-          <div>
-            {isJobBoard ? (
-              <JobBoard
-                key={activeCategory?.slug ?? 'all'}
-                cloudeSlug={cloude.slug}
-                categorySlug={activeCategory?.slug}
-                categoryName={activeCategory?.name ?? cloude.name.replace(' Cloude', '')}
-                initialJobs={jobs}
-                initialTotal={dbJobs?.total ?? 0}
-                postJobHref={postAdHref}
-                near={near}
-              />
-            ) : (
+      <CloudeBrowseProvider>
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 md:py-8">
+          <JsonLd data={cloudeJsonLd(cloude, activeCategory, jsonLdItems)} />
+          <nav className="mb-4 hidden text-sm text-ink-muted md:block">
+            <Link href="/" className="hover:text-brand">Home</Link>
+            <span className="mx-1.5">/</span>
+            {activeCategory ? (
               <>
-                {city && (
-                  <p className="mb-4 flex items-center gap-1.5 text-sm text-ink-muted">
-                    <MapPin size={14} className="shrink-0 text-brand" />
-                    <span>
-                      Showing shops in and around <span className="font-semibold text-ink">{city}</span> — change it from the
-                      search bar.
-                    </span>
-                  </p>
-                )}
-                <CategoryShopGrid
+                <Link href={`/cloudes/${cloude.slug}`} className="hover:text-brand">{cloude.name}</Link>
+                <span className="mx-1.5">/</span>
+                <span className="text-ink">{activeCategory.name}</span>
+              </>
+            ) : (
+              <span className="text-ink">{cloude.name}</span>
+            )}
+          </nav>
+
+          {/* Phones get a slim one-row version of this header; md and up keep the full card. */}
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3.5 md:mb-8 md:gap-4 md:p-6">
+            <div className="flex min-w-0 items-center gap-3 md:gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand md:h-14 md:w-14 md:rounded-2xl">
+                <Icon name={cloude.icon} size={26} className="h-[22px] w-[22px] md:h-[26px] md:w-[26px]" />
+              </span>
+              <div className="min-w-0">
+                <h1 className="font-display text-lg font-bold leading-tight text-ink md:text-2xl">
+                  {activeCategory ? activeCategory.name : cloude.name}
+                </h1>
+                <p className="mt-0.5 line-clamp-1 text-xs text-ink-muted md:mt-1 md:line-clamp-none md:text-sm">
+                  {activeCategory ? `${isJobBoard ? 'Jobs' : 'Shops'} in ${activeCategory.name}` : cloude.description}
+                </p>
+              </div>
+            </div>
+            <Link
+              href={postAdHref}
+              className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-3.5 py-2 text-center text-xs font-semibold text-brand-ink hover:opacity-90 md:block md:px-5 md:py-2.5 md:text-sm"
+            >
+              <Plus size={14} strokeWidth={2.6} className="md:hidden" aria-hidden />
+              <span className="md:hidden">Post</span>
+              <span className="hidden md:inline">
+                {activeCategory
+                  ? `${isJobBoard ? 'Post a job' : 'Post your shop'} in ${activeCategory.name}`
+                  : `Post in ${shortName}`}
+              </span>
+            </Link>
+          </div>
+
+          {/* The Jobs Cloude has its own job search below. */}
+          {!isJobBoard && <CloudeSearchBar cloudeSlug={cloude.slug} />}
+
+          <div className="grid gap-5 md:gap-8 lg:grid-cols-[260px_1fr]">
+            <CloudeCategoryPanel
+              cloudeSlug={cloude.slug}
+              activeSlug={activeCategory?.slug}
+              allLabel={isJobBoard ? 'All Jobs' : 'All Shops'}
+            />
+
+            <div>
+              {isJobBoard ? (
+                <JobBoard
+                  key={activeCategory?.slug ?? 'all'}
                   cloudeSlug={cloude.slug}
                   categorySlug={activeCategory?.slug}
-                  categoryName={activeCategory?.name ?? cloude.name}
-                  staticItems={dbItems.length > 0 ? dbItems : staticItems}
-                  postAdHref={postAdHref}
+                  categoryName={activeCategory?.name ?? cloude.name.replace(' Cloude', '')}
+                  initialJobs={jobs}
+                  initialTotal={dbJobs?.total ?? 0}
+                  postJobHref={postAdHref}
+                  near={near}
                 />
+              ) : (
+                <>
+                  {city && (
+                    <p className="mb-4 hidden items-center gap-1.5 text-sm text-ink-muted md:flex">
+                      <MapPin size={14} className="shrink-0 text-brand" />
+                      <span>
+                        Showing shops in and around <span className="font-semibold text-ink">{city}</span> — change it from the
+                        search bar.
+                      </span>
+                    </p>
+                  )}
+                  <CategoryShopGrid
+                    cloudeSlug={cloude.slug}
+                    categorySlug={activeCategory?.slug}
+                    categoryName={activeCategory?.name ?? cloude.name}
+                    staticItems={dbItems.length > 0 ? dbItems : staticItems}
+                    postAdHref={postAdHref}
+                    mobileHeading={{
+                      title: city ? 'Nearby Stores' : 'All Stores',
+                      subtitle: `${activeCategory?.name ?? shortName} · ${
+                        city ? `in & around ${city}` : 'direct order & instant chat'
+                      }`,
+                    }}
+                  />
 
-                {/* Financing: vacancies posted by agencies in this sector, applied to
-                    exactly as in the Jobs Cloude. */}
-                {alsoJobs && (
-                  <section className="mt-10 border-t border-border pt-8">
-                    <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-                      <div>
-                        <h2 className="font-display text-lg font-bold text-ink sm:text-xl">
-                          Jobs in {activeCategory?.name ?? cloude.name.replace(' Cloude', '')}
-                        </h2>
-                        <p className="mt-0.5 text-xs text-ink-muted">
-                          Vacancies posted by agencies, banks and CA firms here — apply with your resume and they'll schedule your interview.
-                        </p>
+                  {/* Financing: vacancies posted by agencies in this sector, applied to
+                      exactly as in the Jobs Cloude. */}
+                  {alsoJobs && (
+                    <section className="mt-10 border-t border-border pt-8">
+                      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+                        <div>
+                          <h2 className="font-display text-lg font-bold text-ink sm:text-xl">
+                            Jobs in {activeCategory?.name ?? cloude.name.replace(' Cloude', '')}
+                          </h2>
+                          <p className="mt-0.5 text-xs text-ink-muted">
+                            Vacancies posted by agencies, banks and CA firms here — apply with your resume and they'll schedule your interview.
+                          </p>
+                        </div>
+                        <Link
+                          href={postJobHref}
+                          className="shrink-0 rounded-full border border-brand/40 bg-brand-soft px-4 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-brand-ink"
+                        >
+                          Post a job
+                        </Link>
                       </div>
-                      <Link
-                        href={postJobHref}
-                        className="shrink-0 rounded-full border border-brand/40 bg-brand-soft px-4 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-brand-ink"
-                      >
-                        Post a job
-                      </Link>
-                    </div>
-                    <JobBoard
-                      key={`jobs-${activeCategory?.slug ?? 'all'}`}
-                      cloudeSlug={cloude.slug}
-                      categorySlug={activeCategory?.slug}
-                      categoryName={activeCategory?.name ?? cloude.name.replace(' Cloude', '')}
-                      initialJobs={jobs}
-                      initialTotal={dbJobs?.total ?? 0}
-                      postJobHref={postJobHref}
-                      near={near}
-                    />
-                  </section>
-                )}
-              </>
-            )}
+                      <JobBoard
+                        key={`jobs-${activeCategory?.slug ?? 'all'}`}
+                        cloudeSlug={cloude.slug}
+                        categorySlug={activeCategory?.slug}
+                        categoryName={activeCategory?.name ?? cloude.name.replace(' Cloude', '')}
+                        initialJobs={jobs}
+                        initialTotal={dbJobs?.total ?? 0}
+                        postJobHref={postJobHref}
+                        near={near}
+                      />
+                    </section>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </CloudeBrowseProvider>
     );
   }
 

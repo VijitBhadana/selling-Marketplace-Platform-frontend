@@ -21,7 +21,7 @@ let autoDetectStarted = false;
  * detect it again, type another one, or go back to all cities. On a first visit it asks
  * for location once by itself, so shops near the visitor show up straight away.
  */
-export const LocationPicker = memo(function LocationPicker({ variant }: { variant: 'desktop' | 'mobile' }) {
+export const LocationPicker = memo(function LocationPicker({ variant }: { variant: 'desktop' | 'mobile' | 'header' }) {
   const router = useRouter();
   const [city, setCity] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -89,9 +89,13 @@ export const LocationPicker = memo(function LocationPicker({ variant }: { varian
   }
 
   const isDesktop = variant === 'desktop';
+  // Phone navbar: a small "📍 City ⌄" line under the brand name.
+  const isHeader = variant === 'header';
+  const iconSize = isHeader ? 12 : 16;
 
   return (
-    <div ref={rootRef} className={isDesktop ? 'relative shrink-0' : 'relative mb-3'}>
+    // The header variant is deliberately not positioned, so its panel anchors to the navbar's full width.
+    <div ref={rootRef} className={isDesktop ? 'relative shrink-0' : isHeader ? 'min-w-0' : 'relative mb-3'}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -101,18 +105,27 @@ export const LocationPicker = memo(function LocationPicker({ variant }: { varian
         className={
           isDesktop
             ? 'flex h-9 max-w-[9.5rem] items-center gap-1.5 rounded-xl px-2 text-sm font-medium text-ink transition-colors hover:bg-surface lg:max-w-[11rem]'
-            : 'flex h-11 w-full items-center gap-2 rounded-full border border-border bg-bg px-4 text-sm font-medium text-ink'
+            : isHeader
+              ? 'mt-1 flex max-w-full items-center gap-1 text-[11px] font-medium leading-none text-ink-muted transition-colors hover:text-ink'
+              : 'flex h-11 w-full items-center gap-2 rounded-full border border-border bg-bg px-4 text-sm font-medium text-ink'
         }
       >
         {detecting ? (
-          <Loader2 size={16} className="shrink-0 animate-spin text-brand" />
+          <Loader2 size={iconSize} className="shrink-0 animate-spin text-brand" />
         ) : (
-          <MapPin size={16} strokeWidth={2.4} className={`shrink-0 ${city ? 'text-brand' : 'text-ink-muted'}`} />
+          <MapPin
+            size={iconSize}
+            strokeWidth={2.4}
+            className={`shrink-0 ${isHeader ? 'text-rose-500 dark:text-rose-400' : city ? 'text-brand' : 'text-ink-muted'}`}
+          />
         )}
         <span className={`truncate ${city ? '' : 'text-ink-muted'}`}>
-          {detecting ? 'Locating…' : city ?? (isDesktop ? 'Location' : 'Set your location')}
+          {detecting ? 'Locating…' : city ?? (isDesktop ? 'Location' : isHeader ? 'Set location' : 'Set your location')}
         </span>
-        <ChevronDown size={14} className={`ml-auto shrink-0 text-ink-muted transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={isHeader ? 12 : 14}
+          className={`shrink-0 text-ink-muted transition-transform ${isHeader ? '' : 'ml-auto'} ${open ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {open && (
@@ -120,7 +133,11 @@ export const LocationPicker = memo(function LocationPicker({ variant }: { varian
           role="dialog"
           aria-label="Choose your location"
           className={`z-50 rounded-2xl border border-border bg-surface p-3 shadow-2xl ${
-            isDesktop ? 'absolute left-0 top-full mt-2 w-72' : 'mt-2'
+            isDesktop
+              ? 'absolute left-0 top-full mt-2 w-72'
+              : isHeader
+                ? 'absolute left-4 right-4 top-full mt-1 sm:right-auto sm:w-80'
+                : 'mt-2'
           }`}
         >
           <p className="px-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">Your location</p>

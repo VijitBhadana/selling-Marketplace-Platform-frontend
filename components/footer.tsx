@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Cloud, ArrowUp, ArrowRight } from 'lucide-react';
 import { cloudes } from '@/lib/cloudes-data';
+import { LEGAL_LINKS } from '@/lib/legal';
 import { Icon } from './icon';
 
 export function Footer() {
@@ -113,12 +114,17 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 text-xs text-ink-muted sm:flex-row">
-          <p>© {new Date().getFullYear()} DukanCloude. All rights reserved.</p>
-          <div className="flex items-center gap-5">
+        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 text-xs text-ink-muted xl:flex-row">
+          <p className="shrink-0">© {new Date().getFullYear()} DukanCloude. All rights reserved.</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 xl:justify-end">
             <Link href="/about" className="transition-colors hover:text-brand">About</Link>
             <Link href="/jobs" className="transition-colors hover:text-brand">Jobs</Link>
             <Link href="/post-ad" className="transition-colors hover:text-brand">Sell on DukanCloude</Link>
+            {LEGAL_LINKS.map((link) => (
+              <Link key={link.href} href={link.href} className="transition-colors hover:text-brand">
+                {link.label}
+              </Link>
+            ))}
             <a
               href="#"
               aria-label="Back to top"

@@ -290,95 +290,62 @@ html {
   }
 }
 
-/* Advertisement pop-up: a 3D card that flips in, floats, and tilts toward the pointer. */
-.ad3d-stage {
-  perspective: 1400px;
-}
-
-.ad3d-3d {
-  transform-style: preserve-3d;
-}
-
-.ad3d-tilt {
-  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-  transition: transform 0.3s ease-out;
-}
-
-@keyframes ad3d-fade {
+/* Advertisement pop-up: a flat card that rises in, with a soft glow pulsing behind it. */
+@keyframes ad-fade {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-.ad3d-fade {
-  animation: ad3d-fade 0.35s ease-out both;
+.ad-fade {
+  animation: ad-fade 0.35s ease-out both;
 }
 
-@keyframes ad3d-enter {
-  from { transform: translateY(110px) translateZ(-320px) rotateX(55deg) rotateY(-22deg); }
-  to { transform: none; }
+@keyframes ad-enter {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to { opacity: 1; transform: none; }
 }
 
-.ad3d-enter {
-  animation: ad3d-enter 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+.ad-enter {
+  animation: ad-enter 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes ad3d-swap {
-  from { transform: translateZ(-120px) rotateY(-105deg); }
-  to { transform: none; }
+@keyframes ad-swap {
+  from { opacity: 0; transform: translateX(22px); }
+  to { opacity: 1; transform: none; }
 }
 
-.ad3d-swap {
-  animation: ad3d-swap 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+.ad-swap {
+  animation: ad-swap 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes ad3d-float {
-  0%, 100% { transform: translateY(0) rotateX(4deg) rotateY(-7deg); }
-  50% { transform: translateY(-14px) rotateX(-3deg) rotateY(7deg); }
+@keyframes ad-glow {
+  0%, 100% { opacity: 0.55; transform: scale(0.92); }
+  50% { opacity: 0.95; transform: scale(1); }
 }
 
-.ad3d-float {
-  animation: ad3d-float 6s ease-in-out infinite;
+.ad-glow {
+  animation: ad-glow 4s ease-in-out infinite;
 }
 
-@keyframes ad3d-shadow {
-  0%, 100% { transform: scaleX(1); opacity: 0.6; }
-  50% { transform: scaleX(0.8); opacity: 0.35; }
-}
-
-.ad3d-shadow {
-  animation: ad3d-shadow 6s ease-in-out infinite;
-}
-
-@keyframes ad3d-glow {
-  0%, 100% { opacity: 0.55; transform: translateZ(-70px) scale(0.96); }
-  50% { opacity: 0.95; transform: translateZ(-70px) scale(1.05); }
-}
-
-.ad3d-glow {
-  animation: ad3d-glow 4s ease-in-out infinite;
-}
-
-@keyframes ad3d-sheen {
+@keyframes ad-sheen {
   0% { transform: translateX(-180%) skewX(-18deg); }
   40%, 100% { transform: translateX(380%) skewX(-18deg); }
 }
 
-.ad3d-sheen {
-  animation: ad3d-sheen 5s ease-in-out 1.1s infinite;
+.ad-sheen {
+  animation: ad-sheen 5s ease-in-out 1.1s infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ad3d-fade,
-  .ad3d-enter,
-  .ad3d-swap,
-  .ad3d-float,
-  .ad3d-shadow,
-  .ad3d-glow,
-  .ad3d-sheen {
+  .ad-fade,
+  .ad-enter,
+  .ad-swap,
+  .ad-glow,
+  .ad-sheen {
     animation: none;
   }
 
-  .ad3d-glow {
-    transform: translateZ(-70px);
+  .ad-glow {
+    transform: scale(0.95);
   }
 }

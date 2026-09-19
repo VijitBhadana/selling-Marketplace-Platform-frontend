@@ -275,26 +275,41 @@ export function Navbar() {
         scrolled ? 'border-border shadow-[0_1px_0_0_rgb(var(--border)),0_8px_24px_-16px_rgb(0_0_0_/_0.25)]' : 'border-transparent'
       }`}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:gap-5">
-        <Link href="/" className="group flex shrink-0 items-center gap-2.5" aria-label="DukanCloude home">
-          <span className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand via-brand to-brand/60 text-brand-ink shadow-[0_6px_20px_-6px_rgb(var(--brand)/calc(0.7*var(--glow)))] ring-1 ring-inset ring-white/20 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105">
-            <Cloud size={20} strokeWidth={2.4} />
-            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-surface" aria-hidden />
-          </span>
-          <span className="hidden flex-col leading-none sm:flex">
-            <span className="font-display text-lg font-extrabold tracking-tight text-ink">
-              Dukan<span className="bg-gradient-to-r from-brand to-brand/70 bg-clip-text text-transparent">Cloude</span>
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:px-6 md:gap-3 lg:gap-5">
+        <div className="flex min-w-0 items-center gap-2 md:shrink-0 md:gap-2.5">
+          <Link href="/" className="group flex shrink-0 items-center gap-2.5" aria-label="DukanCloude home">
+            <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand via-brand to-brand/60 text-brand-ink shadow-[0_6px_20px_-6px_rgb(var(--brand)/calc(0.7*var(--glow)))] ring-1 ring-inset ring-white/20 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105 md:h-10 md:w-10 md:rounded-2xl">
+              <Cloud size={20} strokeWidth={2.4} />
+              <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-surface" aria-hidden />
             </span>
-            <span className="mt-1 hidden text-[10px] font-medium uppercase tracking-[0.18em] text-ink-muted lg:block">
-              Local marketplace
+            <span className="hidden flex-col leading-none md:flex">
+              <span className="font-display text-lg font-extrabold tracking-tight text-ink">
+                Dukan<span className="bg-gradient-to-r from-brand to-brand/70 bg-clip-text text-transparent">Cloude</span>
+              </span>
+              <span className="mt-1 hidden text-[10px] font-medium uppercase tracking-[0.18em] text-ink-muted lg:block">
+                Local marketplace
+              </span>
             </span>
-          </span>
-        </Link>
+          </Link>
+
+          {/* Phones: name + BETA, with the location picker under it (desktop has it in the search bar). */}
+          <div className="flex min-w-0 flex-col md:hidden">
+            <Link href="/" tabIndex={-1} aria-hidden className="flex min-w-0 items-center gap-1.5 leading-none">
+              <span className="truncate font-display text-base font-extrabold tracking-tight text-ink">
+                Dukan<span className="bg-gradient-to-r from-brand to-brand/70 bg-clip-text text-transparent">Cloude</span>
+              </span>
+              <span className="shrink-0 rounded-md border border-brand/40 bg-brand-soft px-1 py-0.5 text-[8px] font-bold tracking-[0.12em] text-brand max-[359px]:hidden">
+                BETA
+              </span>
+            </Link>
+            <LocationPicker variant="header" />
+          </div>
+        </div>
 
         {/* Search — desktop */}
         <DesktopSearch />
 
-        <div className="ml-auto flex shrink-0 items-center gap-2 lg:gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2 lg:gap-3">
           <button
             type="button"
             onClick={handlePostAdClick}
@@ -417,7 +432,7 @@ export function Navbar() {
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/70 text-ink transition-colors hover:bg-surface-hover md:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface/70 text-ink transition-colors hover:bg-surface-hover md:hidden"
             aria-label="Toggle menu"
             aria-expanded={open}
           >

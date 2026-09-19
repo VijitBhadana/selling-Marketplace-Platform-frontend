@@ -2,7 +2,7 @@
 // shops, notifications, theme). They sit inside one bordered pill, so the
 // buttons themselves are borderless.
 export function navIconButtonClass(open = false) {
-  return `relative flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200 active:scale-95 ${
+  return `relative flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-full transition-all duration-200 active:scale-95 ${
     open ? 'bg-brand-soft text-brand' : 'text-ink-muted hover:bg-surface-hover hover:text-ink'
   }`;
 }
