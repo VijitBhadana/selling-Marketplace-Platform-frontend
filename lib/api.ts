@@ -1,7 +1,14 @@
 // Small fetch wrapper around the NestJS backend.
 // Set NEXT_PUBLIC_API_URL in .env.local (see .env.local.example).
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+
+// An https page can't fetch an http API (mixed content) — in that case the
+// browser goes through the /backend proxy in next.config.mjs instead.
+const API_URL =
+  typeof window !== 'undefined' && window.location.protocol === 'https:' && BACKEND_URL.startsWith('http:')
+    ? '/backend'
+    : BACKEND_URL;
 
 type ApiOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';

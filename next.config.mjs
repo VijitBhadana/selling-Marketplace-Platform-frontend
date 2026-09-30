@@ -18,6 +18,17 @@ const nextConfig = {
       },
     ];
   },
+  // The backend is plain http. A page served over https (Vercel) can't call it
+  // from the browser (mixed content), so browser requests go to /backend/* on
+  // our own origin and are proxied to the API server-side (see lib/api.ts).
+  async rewrites() {
+    return [
+      {
+        source: '/backend/:path*',
+        destination: `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api'}/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
