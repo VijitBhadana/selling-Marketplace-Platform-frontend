@@ -23,6 +23,11 @@ import { EDUCATION_CLOUDE_SLUG } from '@/lib/education-details';
 import { transportQuote } from '@/lib/transport-details';
 import { TransportBookingModal } from '@/components/transport-details';
 import { withImageParams } from '@/lib/image-utils';
+import type { OrderDelivery } from '@/lib/delivery';
+import { DeliveryPartnerCard } from '@/components/delivery-partner-card';
+import { useVisibleInterval } from '@/lib/use-visible-interval';
+
+const DELIVERY_POLL_MS = 15000;
 import { BookingDetailsModal, BookingDetailsSummary } from '@/components/booking-details';
 import { OrderRating } from '@/components/order-rating';
 import { Skeleton, SkeletonGroup } from '@/components/skeleton';
@@ -70,7 +75,7 @@ type Order = {
   shopName: string | null;
   // The buyer's own 1–5 rating of this order's shop, null until they rate it.
   myRating: number | null;
-};
+} & OrderDelivery; // Delivery orders only: how far the delivery partner has got, and who they are.
 
 const statusStyles: Record<Order['status'], string> = {
   PENDING: 'bg-brand-soft text-brand',
@@ -148,6 +153,10 @@ export default function BucketListPage() {
     loadOrders();
   }, [loadOrders]);
 
+  // While a delivery is on its way, keep its status and partner details fresh.
+  const deliveryInProgress = orders?.some((o) => o.status === 'PENDING' && o.deliveryStatus && o.deliveryStatus !== 'DELIVERED') ?? false;
+  useVisibleInterval(() => loadOrders(), DELIVERY_POLL_MS, deliveryInProgress && token ? token : null);
+
   const handleReceive = useCallback(
     async (orderId: string) => {
       if (!token) return;
@@ -211,7 +220,7 @@ export default function BucketListPage() {
     );
   }
 
-  if (user?.role === 'SELLER') {
+  if (user?.role === 'SELLER' || user?.role === 'DELIVERY') {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
         <p className="text-sm text-ink-muted">The bucket list is for buyer accounts. Switch to a buyer account to use it.</p>
@@ -385,6 +394,7 @@ export default function BucketListPage() {
                 <span>{order.paymentMethod === 'COD' ? 'Cash on delivery' : order.paymentStatus === 'PAID' ? 'Paid online' : 'Online payment'}</span>
                 <span className="font-semibold text-ink">₹{order.totalAmount}</span>
               </div>
+              {order.deliveryStatus && <DeliveryPartnerCard order={order} viewer="buyer" />}
               {order.status === 'PENDING' && (
                 <button
                   type="button"

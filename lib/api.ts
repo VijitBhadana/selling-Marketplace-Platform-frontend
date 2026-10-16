@@ -1,6 +1,8 @@
 // Small fetch wrapper around the NestJS backend.
 // Set NEXT_PUBLIC_API_URL in .env.local (see .env.local.example).
 
+import type { DeliveryOrder, DeliveryProfile } from './delivery';
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 
 // An https page can't fetch an http API (mixed content) — in that case the
@@ -241,7 +243,22 @@ export const api = {
   auth: {
     login: (email: string, password: string) =>
       apiFetch('/auth/login', { method: 'POST', body: { email, password } }),
-    register: (body: { name: string; email: string; password: string; phone?: string; role?: 'BUYER' | 'SELLER' }) =>
+    register: (body: {
+      name: string;
+      email: string;
+      password: string;
+      phone?: string;
+      role?: 'BUYER' | 'SELLER' | 'DELIVERY';
+      aadhaar?: string;
+      gstin?: string;
+      // Delivery partners only.
+      aadhaarImage?: string;
+      licenseNumber?: string;
+      licenseImage?: string;
+      vehicleType?: string;
+      vehicleNumber?: string;
+      address?: string;
+    }) =>
       apiFetch('/auth/register', { method: 'POST', body }),
     verifyOtp: (email: string, otp: string) =>
       apiFetch('/auth/verify-otp', { method: 'POST', body: { email, otp } }),
@@ -267,6 +284,20 @@ export const api = {
       apiFetch(`/reviews/order/${orderId}`, { method: 'POST', body, token }),
     shopOrders: (listingId: string, token: string) => apiFetch(`/orders/shop/${listingId}`, { token }),
     markNoShow: (orderId: string, token: string) => apiFetch(`/orders/${orderId}/no-show`, { method: 'POST', token }),
+  },
+  // Delivery partner panel. Uncached — a new request or a status change has to show up at once.
+  delivery: {
+    profile: (token: string) => apiFetch<DeliveryProfile>('/delivery/profile', { token }),
+    setLocation: (body: { city: string; pincode?: string; lat?: number; lng?: number }, token: string) =>
+      apiFetch<DeliveryProfile>('/delivery/location', { method: 'PUT', body, token }),
+    requests: (token: string) => apiFetch<DeliveryOrder[]>('/delivery/requests', { token }),
+    mine: (token: string) => apiFetch<DeliveryOrder[]>('/delivery/orders', { token }),
+    accept: (orderId: string, token: string) => apiFetch<DeliveryOrder>(`/delivery/orders/${orderId}/accept`, { method: 'POST', token }),
+    reject: (orderId: string, token: string) => apiFetch(`/delivery/orders/${orderId}/reject`, { method: 'POST', token }),
+    pickedUp: (orderId: string, token: string) =>
+      apiFetch<DeliveryOrder>(`/delivery/orders/${orderId}/picked-up`, { method: 'POST', token }),
+    delivered: (orderId: string, token: string) =>
+      apiFetch<DeliveryOrder>(`/delivery/orders/${orderId}/delivered`, { method: 'POST', token }),
   },
   users: {
     me: (token: string) => apiFetch('/users/me', { token }),

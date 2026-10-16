@@ -21,6 +21,8 @@ const FOOD_ONLINE_ONLY_TEXT = 'Only online payment is accepted for food orders.'
 const SERVICE_ONLINE_ONLY_TEXT = 'Only online payment is accepted for service bookings.';
 const RENT_ONLINE_ONLY_TEXT =
   'Only online payment is accepted for rentals — the owner hands the item over once the rent is paid.';
+const DELIVERY_ONLINE_ONLY_TEXT =
+  'Delivery orders are paid online in advance — a delivery partner picks your order up from the shop.';
 
 export function CheckoutFlow({
   token,
@@ -58,7 +60,8 @@ export function CheckoutFlow({
 
   const needsPickupMinutes = channel === 'TAKEAWAY' || channel === 'DINE_IN' || channel === 'SERVICE';
   const canContinueDetails = needsPickupMinutes ? Number(pickupMinutes) > 0 : address.trim().length > 3;
-  const codBlocked = isFoodOrder || isServiceOrder || hasRentItems;
+  const isDelivery = channel === 'DELIVERY';
+  const codBlocked = isFoodOrder || isServiceOrder || hasRentItems || isDelivery;
 
   function flashToast(text: string) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -98,6 +101,10 @@ export function CheckoutFlow({
   }
 
   function handleCodClick() {
+    if (isDelivery) {
+      flashToast(DELIVERY_ONLINE_ONLY_TEXT);
+      return;
+    }
     if (isFoodOrder) {
       flashToast(FOOD_ONLINE_ONLY_TEXT);
       return;
@@ -151,6 +158,13 @@ export function CheckoutFlow({
           <p className="mb-3 flex items-start gap-1.5 rounded-lg bg-brand-soft px-3 py-2 text-xs leading-snug text-brand">
             <Info size={13} className="mt-0.5 shrink-0" />
             Rentals are paid online up front — the owner releases the item once the rent is paid.
+          </p>
+        )}
+
+        {step === 'payment' && isDelivery && (
+          <p className="mb-3 flex items-start gap-1.5 rounded-lg bg-brand-soft px-3 py-2 text-xs leading-snug text-brand">
+            <Info size={13} className="mt-0.5 shrink-0" />
+            Delivery orders are paid online in advance — a delivery partner near the shop picks it up and brings it to you.
           </p>
         )}
 
@@ -223,12 +237,13 @@ export function CheckoutFlow({
             <button
               type="button"
               disabled={submitting}
-              aria-disabled={hasRentItems}
-              className={`${cardBase} ${cardInactive} disabled:opacity-60 ${hasRentItems ? 'cursor-not-allowed opacity-60' : ''}`}
+              aria-disabled={hasRentItems || isDelivery}
+              className={`${cardBase} ${cardInactive} disabled:opacity-60 ${hasRentItems || isDelivery ? 'cursor-not-allowed opacity-60' : ''}`}
               onClick={handleCodClick}
             >
               <Banknote size={22} /> {hasRentItems || isServiceOrder ? 'Cash at counter' : isBookingOrder ? 'Pay later (cash)' : 'Cash on Delivery'}
               {hasRentItems && <span className="text-[10px] font-medium text-ink-muted">Not available for rentals</span>}
+              {isDelivery && !hasRentItems && <span className="text-[10px] font-medium text-ink-muted">Not available for delivery</span>}
             </button>
           </div>
         )}
@@ -240,7 +255,9 @@ export function CheckoutFlow({
             </span>
             <p className="text-sm font-semibold text-ink">
               {paidOnline
-                ? `Payment successful — your ${isBookingOrder ? 'booking' : 'order'} is confirmed!`
+                ? isDelivery
+                  ? "Payment successful — we're finding a delivery partner near the shop. You'll be notified once it's picked up."
+                  : `Payment successful — your ${isBookingOrder ? 'booking' : 'order'} is confirmed!`
                 : isBookingOrder
                   ? 'Booking placed — pay the seller in cash.'
                   : 'Order placed — pay cash when you receive it.'}

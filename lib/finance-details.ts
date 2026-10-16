@@ -581,6 +581,7 @@ const TYPE_BY_CATEGORY: Record<string, FinanceItemType> = {
   'gst-registration-filing': 'SERVICE',
   'accounting-bookkeeping': 'SERVICE',
   'credit-score-cibil-services': 'SERVICE',
+  'legal-advisor-advocate-notary': 'SERVICE',
   'bank-correspondent-mini-bank': 'SERVICE',
   'credit-card-services': 'SERVICE',
   'money-transfer-dmt': 'SERVICE',

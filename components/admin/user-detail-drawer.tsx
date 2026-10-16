@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Ban, Briefcase, CreditCard, ExternalLink, RotateCcw, Store, X } from 'lucide-react';
+import { Ban, Bike, Briefcase, CreditCard, ExternalLink, RotateCcw, Store, X } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
+import { vehicleLabel } from '@/lib/delivery';
 import { useAuth } from '@/lib/auth-context';
 import {
   AdminUser,
@@ -145,6 +146,52 @@ export function UserDetailDrawer({
                   />
                 )}
               </dl>
+
+              {user.deliveryProfile && (
+                <section className="mt-6">
+                  <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink">
+                    <span className="text-brand">
+                      <Bike size={15} />
+                    </span>
+                    Delivery partner documents
+                  </h3>
+                  <dl className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-bg/50 p-4 sm:grid-cols-2">
+                    <Detail label="Aadhaar" value={user.aadhaarLast4 ? `XXXX XXXX ${user.aadhaarLast4}` : '—'} />
+                    <Detail label="Driving licence" value={user.deliveryProfile.licenseNumber} />
+                    <Detail
+                      label="Vehicle"
+                      value={`${vehicleLabel(user.deliveryProfile.vehicleType)}${user.deliveryProfile.vehicleNumber ? ` · ${user.deliveryProfile.vehicleNumber}` : ''}`}
+                    />
+                    <Detail
+                      label="Delivery area"
+                      value={[user.deliveryProfile.city, user.deliveryProfile.pincode].filter(Boolean).join(' · ') || 'Not set yet'}
+                    />
+                    <Detail label="Deliveries taken" value={user._count.deliveriesTaken ?? 0} />
+                    <div className="sm:col-span-2">
+                      <Detail label="Address" value={user.deliveryProfile.address} />
+                    </div>
+                  </dl>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {[
+                      { label: 'Aadhaar card', src: user.deliveryProfile.aadhaarImage },
+                      { label: 'Driving licence', src: user.deliveryProfile.licenseImage },
+                    ].map((doc) => (
+                      <a
+                        key={doc.label}
+                        href={doc.src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={`${user.name} - ${doc.label}.jpg`}
+                        className="group block overflow-hidden rounded-xl border border-border transition-colors hover:border-brand"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={doc.src} alt={doc.label} className="aspect-[4/3] w-full bg-bg object-cover" />
+                        <span className="block px-3 py-2 text-xs font-semibold text-ink group-hover:text-brand">{doc.label}</span>
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {isSeller && (
                 <>

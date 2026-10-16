@@ -2,7 +2,20 @@
 
 import { memo, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { BadgeCheck, Bell, CalendarCheck, FileText, Megaphone, PackagePlus, ShoppingBag, UserPlus } from 'lucide-react';
+import {
+  BadgeCheck,
+  Bell,
+  Bike,
+  CalendarCheck,
+  CircleCheckBig,
+  FileText,
+  Megaphone,
+  PackageCheck,
+  PackagePlus,
+  ShoppingBag,
+  UserCheck,
+  UserPlus,
+} from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useChat } from '@/lib/chat-context';
 import { api, ApiError } from '@/lib/api';
@@ -13,10 +26,21 @@ import { navBadgeClass, navIconButtonClass } from './nav-icon-button';
 
 // Persisted alerts: order placed (seller), job application (recruiter), interview
 // scheduled (candidate, from the Jobs & Freelancing Cloude), plus the Financing Cloude's
-// scheme application (agency) and its decision (applicant).
+// scheme application (agency) and its decision (applicant), a delivery request (delivery
+// partner) and the buyer's "picked up" / "delivered" updates.
 type AlertNotification = {
   id: string;
-  type: 'ORDER_PLACED' | 'JOB_APPLICATION' | 'INTERVIEW_SCHEDULED' | 'FINANCE_APPLICATION' | 'FINANCE_DECISION' | 'ANNOUNCEMENT';
+  type:
+    | 'ORDER_PLACED'
+    | 'JOB_APPLICATION'
+    | 'INTERVIEW_SCHEDULED'
+    | 'FINANCE_APPLICATION'
+    | 'FINANCE_DECISION'
+    | 'ANNOUNCEMENT'
+    | 'DELIVERY_REQUEST'
+    | 'ORDER_PICKED_UP'
+    | 'ORDER_DELIVERED'
+    | 'DELIVERY_ASSIGNED';
   title: string;
   body: string;
   read: boolean;
@@ -47,6 +71,10 @@ const ALERT_ICONS = {
   FINANCE_APPLICATION: FileText,
   FINANCE_DECISION: BadgeCheck,
   ANNOUNCEMENT: Megaphone,
+  DELIVERY_REQUEST: Bike,
+  ORDER_PICKED_UP: PackageCheck,
+  ORDER_DELIVERED: CircleCheckBig,
+  DELIVERY_ASSIGNED: UserCheck,
 } as const;
 
 const UNREAD_POLL_MS = 10000;
@@ -139,6 +167,32 @@ export const NotificationsMenu = memo(function NotificationsMenu() {
   const alertRowClass = 'flex w-full items-start gap-3 rounded-xl px-2.5 py-2 text-left';
 
   function renderAlert(item: AlertNotification) {
+    // Delivery partner: a new request → the panel, where it can be accepted.
+    // Shop (alert carries the shop's id): partner on the way / picked up / delivered → the
+    // shop's delivery orders. Buyer: the same updates → their orders in the bucket list.
+    if (
+      item.type === 'DELIVERY_REQUEST' ||
+      item.type === 'DELIVERY_ASSIGNED' ||
+      item.type === 'ORDER_PICKED_UP' ||
+      item.type === 'ORDER_DELIVERED'
+    ) {
+      return (
+        <Link
+          key={item.id}
+          href={
+            item.type === 'DELIVERY_REQUEST'
+              ? '/delivery'
+              : item.listingId
+                ? `/listing/${item.listingId}#delivery-orders`
+                : '/bucket-list'
+          }
+          onClick={() => setOpen(false)}
+          className={`${alertRowClass} transition-colors hover:bg-surface-hover`}
+        >
+          <AlertContent item={item} />
+        </Link>
+      );
+    }
     // Recruiter: "X applied for <job>" → the job's responses.
     if (item.type === 'JOB_APPLICATION' && item.jobId) {
       return (
@@ -227,7 +281,7 @@ export const NotificationsMenu = memo(function NotificationsMenu() {
         <div className="absolute inset-x-4 top-full z-50 mt-1 rounded-2xl sm:inset-x-auto sm:right-0 sm:top-[calc(100%+8px)] sm:mt-0 sm:w-80 border border-border bg-surface p-2 shadow-[0_16px_40px_-14px_rgb(0_0_0_/_0.3)]">
           <div className="flex items-center justify-between px-2.5 py-2">
             <p className="text-sm font-semibold text-ink">
-              {user.role === 'SELLER' ? 'Orders, jobs & applications' : 'Notifications'}
+              {user.role === 'SELLER' ? 'Orders, jobs & applications' : user.role === 'DELIVERY' ? 'Delivery requests' : 'Notifications'}
             </p>
           </div>
           <div className="my-1 h-px bg-border" />
@@ -237,7 +291,11 @@ export const NotificationsMenu = memo(function NotificationsMenu() {
             {error && <p className="px-2.5 py-4 text-center text-xs text-accent">{error}</p>}
             {items?.length === 0 && (
               <p className="px-2.5 py-4 text-center text-xs text-ink-muted">
-                {user.role === 'SELLER' ? 'No orders or applications yet.' : 'No notifications yet.'}
+                {user.role === 'SELLER'
+                  ? 'No orders or applications yet.'
+                  : user.role === 'DELIVERY'
+                    ? 'No delivery requests yet.'
+                    : 'No notifications yet.'}
               </p>
             )}
 

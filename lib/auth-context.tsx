@@ -8,7 +8,7 @@ export type AuthUser = {
   id: string;
   name: string;
   email: string;
-  role: 'BUYER' | 'SELLER' | 'ADMIN';
+  role: 'BUYER' | 'SELLER' | 'ADMIN' | 'DELIVERY';
 };
 
 export type AuthIntent = 'default' | 'post-ad' | 'purchase';
@@ -79,9 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const pending = pendingActionRef.current;
     pendingActionRef.current = null;
-    // The admin always lands in the admin panel, whatever they were doing.
-    if (res.user.role === 'ADMIN') {
-      router.push('/admin');
+    // The admin always lands in the admin panel, whatever they were doing — and a
+    // delivery partner in the delivery panel.
+    if (res.user.role === 'ADMIN' || res.user.role === 'DELIVERY') {
+      router.push(res.user.role === 'ADMIN' ? '/admin' : '/delivery');
       return true;
     }
     if (pending) {

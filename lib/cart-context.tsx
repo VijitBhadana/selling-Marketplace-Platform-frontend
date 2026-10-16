@@ -63,7 +63,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!token || user?.role === 'SELLER') {
+    if (!token || user?.role === 'SELLER' || user?.role === 'DELIVERY') {
       setItems([]);
       setSuspended(false);
       setPendingWarning(false);

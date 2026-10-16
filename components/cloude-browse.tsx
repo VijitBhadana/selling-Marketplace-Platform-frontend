@@ -168,7 +168,7 @@ export function CloudeCategoryPanel({
           </button>
         )}
       </div>
-      <ul className="no-scrollbar flex flex-wrap gap-2 overflow-y-auto p-4 pt-3 lg:min-h-0 lg:flex-col lg:flex-nowrap lg:gap-1.5 lg:pt-4">
+      <ul className="flex flex-wrap gap-2 overflow-y-auto p-4 pt-3 lg:min-h-0 lg:flex-col lg:flex-nowrap lg:gap-1.5 lg:pt-4">
         <li className="max-w-full shrink-0">
           <Link href={`/cloudes/${cloudeSlug}`} className={`${chip} ${!activeSlug ? chipActive : chipIdle}`}>
             <LayoutGrid size={14} className={`shrink-0 lg:hidden ${activeSlug ? 'text-brand' : ''}`} />

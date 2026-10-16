@@ -52,13 +52,13 @@ const skillGroups: RawGroup[] = [
     title: 'Skill-Related Businesses',
     icon: 'Palette',
     image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035',
-    items: ['Beauty, makeup, salon & parlour products/items, Mehndi artist', 'Cleaning products', 'Interior & décor items', 'Snacks and similar products', 'T-shirts, cups & printing-related products', 'Flex and printing services and banner', 'Cleaning services / dry cleaning, Laundry worker', 'Other Skill-Related Businesses'],
+    items: ['Beauty, makeup, salon & parlour products/items, Mehndi artist', 'Cleaning products', 'Interior & décor items', 'Snacks and similar products', 'T-shirts, cups & printing-related products', 'Flex and printing services and banner', 'Cleaning services / dry cleaning, Laundry worker', 'Spa & Massage Services', 'Other Skill-Related Businesses'],
   },
   {
     title: 'Freelancing / Services (Mistri / Service Provider)',
     icon: 'Wrench',
     image: 'https://images.unsplash.com/photo-1698479603408-1a66a6d9e80f',
-    items: ['Vehicle repair workers', 'AC & electronics repair technicians', 'Mobile & laptop repair specialists', 'Laptop cleaning, repairing & maintenance', 'Hair cutting & personal grooming', 'Vehicle washing, PPF, servicing', 'Tailor', 'Construction work freelance (plumber, electrician, carpenter, lohar, house maker mistri, thikedar)'],
+    items: ['Vehicle repair workers', 'AC & electronics repair technicians', 'Mobile & laptop repair specialists', 'Laptop cleaning, repairing & maintenance', 'Hair cutting & personal grooming', 'Vehicle washing, PPF, servicing', 'Tailor', 'Construction work freelance (plumber, electrician, carpenter, lohar, house maker mistri, thikedar)', 'Fashion Designer / Boutique', 'Computer Hardware, Networking & CCTV'],
   },
   {
     title: 'Tutor / Coaching / Institute',
@@ -115,7 +115,7 @@ const foodGroups: RawGroup[] = [
     title: 'Restaurants, Kitchens & Street Food',
     icon: 'UtensilsCrossed',
     image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4',
-    items: ['Restaurants', 'Cloud Kitchen', 'Kitchens', 'Special Food', 'Mess Food', 'Street Food'],
+    items: ['Restaurants', 'Cloud Kitchen', 'Kitchens', 'Special Food', 'Mess Food', 'Street Food', 'Catering & Cook (Halwai) Services'],
   },
   {
     title: 'Budget-Based Food Search',
@@ -220,13 +220,24 @@ const softwareGroups: RawGroup[] = [
     title: 'Sales & Marketing',
     icon: 'Megaphone',
     image: 'https://images.unsplash.com/photo-1533750349088-cd871a92f312',
-    items: ['Digital Marketing & SEO', 'Social Media Marketing', 'Sales & Lead Generation', 'Content Marketing'],
+    items: [
+      'Digital Marketing & SEO',
+      'Social Media Marketing',
+      'Sales & Lead Generation',
+      'Content Marketing',
+      'Marketing',
+      'Content Writer',
+      'Field Sales',
+      'Retail / Counter Sales',
+      'Sales / Business Development',
+      'Telesales / Telemarketing',
+    ],
   },
   {
     title: 'Design (incl. Graphic Designers)',
     icon: 'Palette',
     image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5',
-    items: ['Graphic Design', 'Logo & Branding', 'UI/UX Design', 'Print & Packaging Design'],
+    items: ['Graphic Design', 'Logo & Branding', 'UI/UX Design', 'Print & Packaging Design', 'Fashion Designer'],
   },
   {
     title: 'Media',
@@ -264,6 +275,48 @@ const softwareGroups: RawGroup[] = [
     image: 'https://images.unsplash.com/photo-1626785774573-4b799315345d',
     items: ['2D Animation', '3D Animation', 'Explainer Videos', 'VFX & Motion Design'],
   },
+  {
+    title: 'Labour & Field Staff',
+    icon: 'HardHat',
+    image: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e',
+    items: ['Peon', 'Housekeeping', 'Security Guard', 'Painter', 'Labour / Helper', 'Technician', 'Delivery', 'Driver'],
+  },
+  {
+    title: 'Skilled Trades',
+    icon: 'Wrench',
+    image: 'https://images.unsplash.com/photo-1698479603408-1a66a6d9e80f',
+    items: ['Mechanic', 'Electrician', 'Carpenter', 'Plumber', 'Refrigerator & AC Technician'],
+  },
+  {
+    title: 'IT & Hardware',
+    icon: 'Cpu',
+    image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c',
+    items: ['IT / Software / Data Analyst', 'Hardware / Network Engineer'],
+  },
+  {
+    title: 'Office, Admin & Support',
+    icon: 'Briefcase',
+    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab',
+    items: ['Accountant', 'Cashier', 'Legal', 'Recruiter / HR / Admin', 'Receptionist', 'Back Office / Data Entry', 'Customer Support / Tele Caller'],
+  },
+  {
+    title: 'Healthcare Staff',
+    icon: 'Stethoscope',
+    image: 'https://images.unsplash.com/photo-1516549655169-df83a0774514',
+    items: ['Nurse / Compounder', 'Lab Technician / Pharmacist', 'Ward Boy'],
+  },
+  {
+    title: 'Teaching & Training',
+    icon: 'GraduationCap',
+    image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f',
+    items: ['Teacher / Tutor', 'Trainer'],
+  },
+  {
+    title: 'Hospitality, Events & Beauty',
+    icon: 'UtensilsCrossed',
+    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4',
+    items: ['Cook / Chef', 'Waiter / Steward', 'Event Management', 'Beautician', 'Spa'],
+  },
 ];
 
 const financingGroups: RawGroup[] = [
@@ -289,7 +342,7 @@ const financingGroups: RawGroup[] = [
     title: 'Tax, GST & Accounting Services',
     icon: 'Calculator',
     image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c',
-    items: ['Income Tax Filing (CA)', 'GST Registration & Filing', 'Accounting & Bookkeeping', 'Credit Score / CIBIL Services'],
+    items: ['Income Tax Filing (CA)', 'GST Registration & Filing', 'Accounting & Bookkeeping', 'Credit Score / CIBIL Services', 'Legal Advisor / Advocate / Notary'],
   },
   {
     title: 'Banking & Payment Agents',
@@ -361,7 +414,7 @@ const clinicGroups: RawGroup[] = [
     title: 'Diagnostics & Physiotherapy',
     icon: 'Activity',
     image: 'https://images.unsplash.com/photo-1516549655169-df83a0774514',
-    items: ['Physiotherapy', 'X-Ray', 'Radiology', 'Pathology Lab', 'Other Healthcare-Related Services'],
+    items: ['Physiotherapy', 'X-Ray', 'Radiology', 'Pathology Lab', 'Pharmacy / Medical Store', 'Home Nursing & Patient Care', 'Other Healthcare-Related Services'],
   },
 ];
 

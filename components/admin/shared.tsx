@@ -8,7 +8,7 @@ export type AdminUser = {
   email: string;
   phone: string | null;
   avatarUrl: string | null;
-  role: 'BUYER' | 'SELLER';
+  role: 'BUYER' | 'SELLER' | 'DELIVERY';
   city: string | null;
   pincode: string | null;
   isEmailVerified: boolean;
@@ -58,6 +58,19 @@ export type AdminUserDetail = AdminUser & {
     createdAt: string;
   }[];
   subscriptions: Payment[];
+  // Delivery partners only: the papers they signed up with.
+  aadhaarLast4: string | null;
+  deliveryProfile: {
+    address: string;
+    vehicleType: string;
+    vehicleNumber: string | null;
+    licenseNumber: string;
+    licenseImage: string;
+    aadhaarImage: string;
+    city: string | null;
+    pincode: string | null;
+  } | null;
+  _count: AdminUser['_count'] & { deliveriesTaken?: number };
 };
 
 export function SubscriptionBadge({ active }: { active: boolean }) {
@@ -103,10 +116,14 @@ export function RoleBadge({ role }: { role: string }) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-        role === 'SELLER' ? 'bg-brand-soft text-brand' : 'bg-accent-soft text-accent'
+        role === 'SELLER'
+          ? 'bg-brand-soft text-brand'
+          : role === 'DELIVERY'
+            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+            : 'bg-accent-soft text-accent'
       }`}
     >
-      {role === 'SELLER' ? 'Seller' : 'Buyer'}
+      {role === 'SELLER' ? 'Seller' : role === 'DELIVERY' ? 'Delivery' : 'Buyer'}
     </span>
   );
 }

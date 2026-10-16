@@ -29,8 +29,10 @@ function VerifyOtpForm() {
     try {
       const res = await api.auth.verifyOtp(email, otp);
       setSession(res.accessToken, res.user);
-      startTopLoader(next || '/');
-      router.push(next || '/');
+      // A new delivery partner goes straight to their panel to set their location.
+      const dest = res.user.role === 'DELIVERY' ? '/delivery' : next || '/';
+      startTopLoader(dest);
+      router.push(dest);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not verify the OTP. The backend server may be offline.');
       setLoading(false);

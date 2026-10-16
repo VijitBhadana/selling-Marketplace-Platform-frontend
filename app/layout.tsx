@@ -15,6 +15,7 @@ import { JsonLd } from '@/components/json-ld';
 import { TopLoader } from '@/components/top-loader';
 import { BrandThemeStyle } from '@/components/brand-theme-style';
 import { SiteChrome } from '@/components/site-chrome';
+import { SplashLoader } from '@/components/splash-loader';
 import { ogImageUrl } from '@/lib/seo';
 import { SITE_DESCRIPTION, SITE_DOMAIN, SITE_KEYWORDS, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
 
@@ -103,6 +104,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <TopLoader />
         <JsonLd data={siteJsonLd} />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {/* After next-themes' script, so it paints in the right theme. */}
+          <SplashLoader />
           <AuthProvider>
             <CartProvider>
               <ChatProvider>
