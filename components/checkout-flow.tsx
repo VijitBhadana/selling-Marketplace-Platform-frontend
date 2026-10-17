@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Banknote, CheckCircle2, Info, MapPin, Store, Truck, Utensils, Wallet, X } from 'lucide-react';
+import { AlertTriangle, Banknote, CheckCircle2, Info, MapPin, NotebookPen, Store, Truck, Utensils, Wallet, X } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 
 type Channel = 'TAKEAWAY' | 'DELIVERY' | 'DINE_IN' | 'SERVICE' | 'BOOKING';
 type PaymentMethod = 'ONLINE' | 'COD';
-type Step = 'channel' | 'details' | 'payment' | 'done';
+type Step = 'channel' | 'details' | 'note' | 'payment' | 'done';
+
+const NOTE_MAX = 300;
 
 const cardBase =
   'flex flex-1 flex-col items-center gap-2 rounded-xl border px-4 py-5 text-sm font-semibold transition-colors';
@@ -27,6 +29,7 @@ const DELIVERY_ONLINE_ONLY_TEXT =
 export function CheckoutFlow({
   token,
   isFoodOrder = false,
+  hasFoodItems = isFoodOrder,
   isServiceOrder = false,
   isBookingOrder = false,
   hasBookingItems = false,
@@ -36,6 +39,8 @@ export function CheckoutFlow({
 }: {
   token: string;
   isFoodOrder?: boolean;
+  /** Some items are from Food Cloude shops — the buyer gets a step to leave the kitchen a note. */
+  hasFoodItems?: boolean;
   isServiceOrder?: boolean;
   /** Every item is a Booking Cloude booking — dates/addresses are already in the booking details. */
   isBookingOrder?: boolean;
@@ -51,6 +56,7 @@ export function CheckoutFlow({
   const [channel, setChannel] = useState<Channel | null>(isBookingOrder ? 'BOOKING' : isServiceOrder ? 'SERVICE' : null);
   const [pickupMinutes, setPickupMinutes] = useState('');
   const [address, setAddress] = useState('');
+  const [note, setNote] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +93,7 @@ export function CheckoutFlow({
           channel,
           pickupEtaMinutes: needsPickupMinutes ? Number(pickupMinutes) : undefined,
           address: channel === 'DELIVERY' ? address.trim() : undefined,
+          note: hasFoodItems && note.trim() ? note.trim() : undefined,
           paymentMethod: method,
         },
         token,
@@ -144,6 +151,7 @@ export function CheckoutFlow({
             {step === 'details' && channel === 'TAKEAWAY' && 'When will you pick it up?'}
             {step === 'details' && (channel === 'DINE_IN' || channel === 'SERVICE') && 'When will you arrive?'}
             {step === 'details' && channel === 'DELIVERY' && 'Delivery address'}
+            {step === 'note' && 'Any instructions for the kitchen?'}
             {step === 'payment' && 'Choose payment method'}
             {step === 'done' && (isBookingOrder ? 'Booking placed' : 'Order placed')}
           </h3>
@@ -224,6 +232,28 @@ export function CheckoutFlow({
           </div>
         )}
 
+        {step === 'note' && (
+          <div>
+            <label htmlFor="order-note" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-ink">
+              <NotebookPen size={14} /> Note for the shop <span className="font-normal text-ink-muted">(optional)</span>
+            </label>
+            <textarea
+              id="order-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
+              rows={4}
+              placeholder="e.g. Less spicy, no onion or garlic, extra chutney, pack the gravy separately…"
+              className="w-full rounded-lg border border-border bg-bg px-3.5 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15"
+            />
+            <p className="mt-1 flex justify-between gap-3 text-xs text-ink-muted">
+              <span>The shop sees this with your order.</span>
+              <span>
+                {note.length}/{NOTE_MAX}
+              </span>
+            </p>
+          </div>
+        )}
+
         {step === 'payment' && (
           <div className="flex gap-3">
             <button
@@ -278,7 +308,9 @@ export function CheckoutFlow({
           <div className="mt-5 flex justify-between">
             <button
               type="button"
-              onClick={() => setStep(step === 'payment' ? 'details' : 'channel')}
+              onClick={() =>
+                setStep(step === 'payment' ? (hasFoodItems ? 'note' : 'details') : step === 'note' ? 'details' : 'channel')
+              }
               className={`text-sm font-medium text-ink-muted hover:text-ink ${
                 step === 'channel' || (step === 'details' && isServiceOrder) || (step === 'payment' && isBookingOrder) ? 'invisible' : ''
               }`}
@@ -288,11 +320,13 @@ export function CheckoutFlow({
             {step !== 'payment' && (
               <button
                 type="button"
-                disabled={step === 'channel' ? !channel : !canContinueDetails}
-                onClick={() => setStep(step === 'channel' ? 'details' : 'payment')}
+                disabled={step === 'channel' ? !channel : step === 'details' ? !canContinueDetails : false}
+                onClick={() =>
+                  setStep(step === 'channel' ? 'details' : step === 'details' && hasFoodItems ? 'note' : 'payment')
+                }
                 className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-brand-ink transition-opacity disabled:opacity-50"
               >
-                Continue
+                {step === 'note' && !note.trim() ? 'Skip' : 'Continue'}
               </button>
             )}
           </div>

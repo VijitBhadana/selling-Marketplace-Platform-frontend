@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Clock, MapPin, Package, Star, Store, Wrench } from 'lucide-react';
 import type { LiveShop, Rating } from '@/lib/api';
 import { FALLBACK_LISTING_IMAGE, withImageParams } from '@/lib/image-utils';
+import { conditionLabel } from '@/lib/item-condition';
 import { SmartImage } from './smart-image';
 
 const UNIT_SUFFIX: Record<string, string> = {
@@ -104,7 +105,10 @@ export function LiveShopCard({ shop, rating }: { shop: LiveShop; rating?: Rating
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-medium text-ink">{p.name}</span>
-                  <span className="block truncate text-[11px] font-semibold text-brand">{priceText(p)}</span>
+                  <span className="block truncate text-[11px] font-semibold text-brand">
+                    {priceText(p)}
+                    {conditionLabel(p.condition) && <span className="font-medium text-ink-muted"> · {conditionLabel(p.condition)}</span>}
+                  </span>
                 </span>
               </li>
             ))}

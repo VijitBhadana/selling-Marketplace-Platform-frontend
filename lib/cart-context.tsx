@@ -21,6 +21,8 @@ export type CartItem = {
     imageUrl: string | null;
     isService: boolean;
     priceUnit?: string | null;
+    /** USED (second hand) or REFURBISHED; null for a new item. */
+    condition?: string | null;
     /** Property Cloude only — rent or sale, minimum rent period, deposit... */
     propertyDetails?: PropertyDetails | null;
     /** Agriculture transport only — the vehicle's delivery charge and hourly rate. */

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { AlertTriangle, CalendarCheck, Minus, Package, Pencil, Plus, ShoppingBasket, Store, Trash2, Truck, Utensils, Wrench } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, Minus, NotebookPen, Package, Pencil, Plus, ShoppingBasket, Store, Trash2, Truck, Utensils, Wrench } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useCart, type CartItem } from '@/lib/cart-context';
 import { api } from '@/lib/api';
@@ -25,6 +25,7 @@ import { TransportBookingModal } from '@/components/transport-details';
 import { withImageParams } from '@/lib/image-utils';
 import type { OrderDelivery } from '@/lib/delivery';
 import { DeliveryPartnerCard } from '@/components/delivery-partner-card';
+import { ConditionBadge } from '@/components/item-condition';
 import { useVisibleInterval } from '@/lib/use-visible-interval';
 
 const DELIVERY_POLL_MS = 15000;
@@ -64,6 +65,8 @@ type Order = {
   channel: 'TAKEAWAY' | 'DELIVERY' | 'DINE_IN' | 'SERVICE' | 'BOOKING';
   pickupEta: string | null;
   address: string | null;
+  // Food orders: the buyer's instructions for the kitchen.
+  note: string | null;
   paymentMethod: 'ONLINE' | 'COD';
   paymentStatus: 'PENDING' | 'PAID';
   status: 'PENDING' | 'COMPLETED' | 'NO_SHOW';
@@ -186,6 +189,7 @@ export default function BucketListPage() {
       groups: Array.from(groups.entries()),
       grandTotal: items.reduce((sum, item) => sum + lineTotal(item), 0),
       isFoodOrder: items.length > 0 && items.every((item) => item.product.listing.cloude?.slug === 'food'),
+      hasFoodItems: items.some((item) => item.product.listing.cloude?.slug === 'food'),
       // Skill Cloude on-site services, Clinic & Doctors Cloude doctor appointments and Education
       // Cloude course / class enrolments and counselling sessions.
       isServiceOrder:
@@ -228,7 +232,7 @@ export default function BucketListPage() {
     );
   }
 
-  const { groups, grandTotal, isFoodOrder, isServiceOrder, missingBookingDetails, isBookingOrder, hasBookingItems, hasRentItems } = cart;
+  const { groups, grandTotal, isFoodOrder, hasFoodItems, isServiceOrder, missingBookingDetails, isBookingOrder, hasBookingItems, hasRentItems } = cart;
   const cartPending = authLoading || !cartReady;
   const editingKind = editingBooking ? bookingKindOf(editingBooking) : null;
 
@@ -273,6 +277,7 @@ export default function BucketListPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-ink">{item.product.name}</p>
+                      <ConditionBadge condition={item.product.condition} className="my-0.5" />
                       <p className="text-xs text-ink-muted">
                         {item.product.priceType === 'CONTACT_FOR_PRICE'
                           ? 'Contact for price'
@@ -394,6 +399,11 @@ export default function BucketListPage() {
                 <span>{order.paymentMethod === 'COD' ? 'Cash on delivery' : order.paymentStatus === 'PAID' ? 'Paid online' : 'Online payment'}</span>
                 <span className="font-semibold text-ink">₹{order.totalAmount}</span>
               </div>
+              {order.note && (
+                <p className="mt-2 flex items-start gap-1 break-words text-xs text-ink-muted">
+                  <NotebookPen size={12} className="mt-0.5 shrink-0" /> Note: {order.note}
+                </p>
+              )}
               {order.deliveryStatus && <DeliveryPartnerCard order={order} viewer="buyer" />}
               {order.status === 'PENDING' && (
                 <button
@@ -448,6 +458,7 @@ export default function BucketListPage() {
         <CheckoutFlow
           token={token}
           isFoodOrder={isFoodOrder}
+          hasFoodItems={hasFoodItems}
           isServiceOrder={isServiceOrder}
           isBookingOrder={isBookingOrder}
           hasBookingItems={hasBookingItems}

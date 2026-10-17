@@ -280,7 +280,7 @@ export function Navbar() {
         <div className="flex min-w-0 items-center gap-2 md:shrink-0 md:gap-2.5">
           <Link href="/" className="group flex shrink-0 items-center gap-2.5" aria-label="DukanCloude home">
             <Image
-              src="/dukancloude-icon.png"
+              src="/dukancloude-logo-icon.png"
               alt=""
               width={40}
               height={40}
@@ -288,8 +288,8 @@ export function Navbar() {
               className="h-9 w-9 shrink-0 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105 md:h-10 md:w-10"
             />
             <span className="hidden md:flex">
-              <Image src="/dukancloude-wordmark.png" alt="DukanCloude" width={198} height={23} priority className="h-[23px] w-auto dark:hidden" />
-              <Image src="/dukancloude-wordmark-dark.png" alt="DukanCloude" width={198} height={23} priority className="hidden h-[23px] w-auto dark:block" />
+              <Image src="/dukancloude-logo-wordmark.png" alt="DukanCloude" width={196} height={23} priority className="h-[23px] w-auto dark:hidden" />
+              <Image src="/dukancloude-logo-wordmark-dark.png" alt="DukanCloude" width={196} height={23} priority className="hidden h-[23px] w-auto dark:block" />
             </span>
           </Link>
 
@@ -297,8 +297,8 @@ export function Navbar() {
           <div className="flex min-w-0 flex-col md:hidden">
             <Link href="/" tabIndex={-1} aria-hidden className="flex min-w-0 items-center gap-1.5 leading-none">
               <span className="min-w-0 shrink">
-                <Image src="/dukancloude-wordmark.png" alt="DukanCloude" width={137} height={16} priority className="h-4 w-auto max-w-full dark:hidden" />
-                <Image src="/dukancloude-wordmark-dark.png" alt="DukanCloude" width={137} height={16} priority className="hidden h-4 w-auto max-w-full dark:block" />
+                <Image src="/dukancloude-logo-wordmark.png" alt="DukanCloude" width={136} height={16} priority className="h-4 w-auto max-w-full dark:hidden" />
+                <Image src="/dukancloude-logo-wordmark-dark.png" alt="DukanCloude" width={136} height={16} priority className="hidden h-4 w-auto max-w-full dark:block" />
               </span>
               <span className="shrink-0 rounded-md border border-brand/40 bg-brand-soft px-1 py-0.5 text-[8px] font-bold tracking-[0.12em] text-brand max-[359px]:hidden">
                 BETA

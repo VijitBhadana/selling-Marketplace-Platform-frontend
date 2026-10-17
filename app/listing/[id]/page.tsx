@@ -232,6 +232,11 @@ function listingJsonLd(listing: any, cloude: Cloude | undefined, image: string):
             image: isPublicImageUrl(p.imageUrl) ? p.imageUrl : undefined,
           },
           ...(p.price != null && p.priceType !== 'CONTACT_FOR_PRICE' ? { price: String(p.price), priceCurrency: 'INR' } : {}),
+          ...(p.condition === 'USED'
+            ? { itemCondition: 'https://schema.org/UsedCondition' }
+            : p.condition === 'REFURBISHED'
+              ? { itemCondition: 'https://schema.org/RefurbishedCondition' }
+              : {}),
         }))
       : undefined,
   };

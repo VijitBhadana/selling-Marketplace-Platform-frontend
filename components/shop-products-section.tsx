@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { BadgeIndianRupee, Check, GraduationCap, Home, ImagePlus, Loader2, MapPin, MessageCircle, Package, Pencil, Plus, ShoppingCart, Stethoscope, Tag, Trash2, Truck, Wrench, X } from 'lucide-react';
+import { BadgeIndianRupee, Check, GraduationCap, Home, ImagePlus, Loader2, MapPin, MessageCircle, Package, Pencil, Plus, Recycle, ShoppingCart, Sparkles, Stethoscope, Tag, Trash2, Truck, Wrench, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useCart } from '@/lib/cart-context';
 import { api, ApiError } from '@/lib/api';
@@ -88,6 +88,8 @@ import {
 } from '@/lib/finance-details';
 import { FinanceDetailsModal, FinanceFieldsEditor, FinanceProductGroups, FinanceTypePicker } from '@/components/finance-details';
 import { useMyFinanceApplications } from '@/lib/use-my-finance-applications';
+import { ITEM_CONDITION_OPTIONS, canBeSecondHand, type ItemCondition } from '@/lib/item-condition';
+import { ConditionBadge } from '@/components/item-condition';
 
 // Only needed once a buyer taps Apply — kept out of the shop page's initial bundle.
 const FinanceApplyModal = dynamic(() => import('@/components/finance-apply-modal').then((m) => m.FinanceApplyModal));
@@ -111,6 +113,8 @@ type Product = {
   educationDetails?: EducationDetails | null;
   /** Financing Cloude only — a loan scheme, insurance policy, investment plan or service. */
   financeDetails?: FinanceDetails | null;
+  /** Goods only — USED (second hand) or REFURBISHED; null for a new item. */
+  condition?: 'USED' | 'REFURBISHED' | null;
 };
 
 const inputClass =
@@ -622,6 +626,8 @@ const ProductTile = memo(function ProductTile({
         )}
       </div>
 
+      <ConditionBadge condition={p.condition} className="absolute left-1.5 top-1.5" />
+
       {isOwner && <OwnerActions deleting={deleting} onEdit={() => onEdit(p)} onDelete={() => onDelete(p.id)} />}
 
       <div className="p-2">
@@ -862,6 +868,9 @@ function ProductModal({
   const [priceType, setPriceType] = useState<'FIXED' | 'CONTACT_FOR_PRICE'>(product?.priceType ?? 'FIXED');
   const [price, setPrice] = useState(product?.price ?? '');
   const [isService, setIsService] = useState(product?.isService ?? false);
+  // Goods in shops where pre-owned items make sense: new, second hand or refurbished.
+  const [condition, setCondition] = useState<ItemCondition>(product?.condition ?? 'NEW');
+  const showCondition = canBeSecondHand(cloudeSlug, categorySlug, cloudeSlug === 'skill' && isService);
   const [priceUnit, setPriceUnit] = useState<PriceUnit | null>(bookingKind ? effectivePriceUnit(bookingKind, product?.priceUnit) : null);
   // Property Cloude: rent or sale, rent unit and every property detail.
   const [propertyValues, setPropertyValues] = useState<PropertyFormValues>(() => toPropertyFormValues(product?.propertyDetails));
@@ -922,6 +931,7 @@ function ProductModal({
         priceType,
         price: priceType === 'FIXED' ? Number(price) : undefined,
         ...(cloudeSlug === 'skill' ? { isService } : {}),
+        ...(showCondition ? { condition } : {}),
         // A doctor/medicine sends its details; switching an existing one to "Other" clears them.
         ...(clinicItem
           ? { clinicDetails: clinicPayload(clinicItem, clinicValues) }
@@ -1139,6 +1149,33 @@ function ProductModal({
                 {isService
                   ? 'On-site service (haircut, repair, tutoring...) — buyers only pick a time and pay online.'
                   : 'A physical item — buyers can choose Takeaway or Delivery, and Cash on Delivery.'}
+              </p>
+            </div>
+          )}
+
+          {showCondition && (
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-ink">Condition</label>
+              <div className="flex flex-wrap gap-2">
+                {ITEM_CONDITION_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setCondition(option.value)}
+                    aria-pressed={condition === option.value}
+                    className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
+                      condition === option.value
+                        ? 'border-brand bg-brand-soft text-brand ring-1 ring-brand'
+                        : 'border-border bg-bg text-ink-muted hover:border-brand/50 hover:text-ink'
+                    }`}
+                  >
+                    {option.value === 'NEW' ? <Sparkles size={13} /> : option.value === 'USED' ? <Recycle size={13} /> : <Wrench size={13} />}
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] leading-snug text-ink-muted">
+                {ITEM_CONDITION_OPTIONS.find((option) => option.value === condition)?.hint}
               </p>
             </div>
           )}

@@ -111,6 +111,8 @@ export type LiveShop = {
     priceUnit: string | null;
     imageUrl: string | null;
     isService: boolean;
+    /** USED (second hand) or REFURBISHED; null for a new item. */
+    condition?: string | null;
   }[];
 };
 
@@ -274,7 +276,7 @@ export const api = {
   },
   orders: {
     checkout: (
-      body: { channel: 'TAKEAWAY' | 'DELIVERY' | 'DINE_IN' | 'SERVICE' | 'BOOKING'; pickupEtaMinutes?: number; address?: string; paymentMethod: 'ONLINE' | 'COD' },
+      body: { channel: 'TAKEAWAY' | 'DELIVERY' | 'DINE_IN' | 'SERVICE' | 'BOOKING'; pickupEtaMinutes?: number; address?: string; note?: string; paymentMethod: 'ONLINE' | 'COD' },
       token: string,
     ) => apiFetch('/orders/checkout', { method: 'POST', body, token }),
     mine: (token: string) => apiFetch('/orders/mine', { token }),

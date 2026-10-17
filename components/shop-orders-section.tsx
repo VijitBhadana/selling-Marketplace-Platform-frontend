@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertOctagon, Bike, CalendarCheck, ClipboardList, MapPin, Store, Truck, Utensils, Wrench } from 'lucide-react';
+import { AlertOctagon, Bike, CalendarCheck, ClipboardList, MapPin, NotebookPen, Store, Truck, Utensils, Wrench } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { orderItemLine, type BookingDetails } from '@/lib/booking-details';
@@ -15,6 +15,8 @@ type Order = {
   channel: 'TAKEAWAY' | 'DELIVERY' | 'DINE_IN' | 'SERVICE' | 'BOOKING';
   pickupEta: string | null;
   address: string | null;
+  // Food orders: the buyer's instructions for the kitchen.
+  note: string | null;
   paymentMethod: 'ONLINE' | 'COD';
   status: 'PENDING' | 'COMPLETED' | 'NO_SHOW';
   totalAmount: string;
@@ -23,6 +25,18 @@ type Order = {
 } & OrderDelivery;
 
 const isBookingOrder = (order: Order) => order.items.some((it) => it.bookingDetails);
+
+function OrderNote({ note }: { note: string | null }) {
+  if (!note) return null;
+  return (
+    <p className="mt-2 flex items-start gap-1.5 break-words rounded-lg bg-brand-soft px-2.5 py-1.5 text-xs text-brand">
+      <NotebookPen size={12} className="mt-0.5 shrink-0" />
+      <span>
+        <span className="font-semibold">Buyer&apos;s note:</span> {note}
+      </span>
+    </p>
+  );
+}
 
 // The shop's latest delivery orders — enough to see who took what today and recently.
 const DELIVERY_ORDERS_SHOWN = 20;
@@ -44,8 +58,13 @@ export function ShopOrdersSection({ listingId, sellerId }: { listingId: string; 
     try {
       const all: Order[] = await api.orders.shopOrders(listingId, token);
       // Pending COD orders (for no-show reporting) plus every pending booking, so
-      // Booking Cloude sellers can see what the buyer asked for.
-      setOrders(all.filter((o) => o.status === 'PENDING' && (o.paymentMethod === 'COD' || isBookingOrder(o))));
+      // Booking Cloude sellers can see what the buyer asked for — and pending food orders
+      // carrying kitchen instructions. Delivery orders show in their own section below.
+      setOrders(
+        all.filter(
+          (o) => o.status === 'PENDING' && (o.paymentMethod === 'COD' || isBookingOrder(o) || (o.note && !o.deliveryStatus)),
+        ),
+      );
       // Delivery orders: which delivery partner is coming for / took each one.
       setDeliveryOrders(all.filter((o) => o.deliveryStatus).slice(0, DELIVERY_ORDERS_SHOWN));
     } catch {
@@ -95,7 +114,11 @@ export function ShopOrdersSection({ listingId, sellerId }: { listingId: string; 
     <div className="mt-6 rounded-2xl border border-border bg-surface p-4 sm:p-6">
       <h2 className="mb-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-muted">
         <ClipboardList size={15} className="text-brand" />{' '}
-        {orders.some(isBookingOrder) ? 'Pending bookings & orders' : 'Pending Cash-on-Delivery orders'}
+        {orders.some(isBookingOrder)
+          ? 'Pending bookings & orders'
+          : orders.every((o) => o.paymentMethod === 'COD')
+            ? 'Pending Cash-on-Delivery orders'
+            : 'Pending orders'}
       </h2>
 
       <div className="space-y-3">
@@ -128,6 +151,7 @@ export function ShopOrdersSection({ listingId, sellerId }: { listingId: string; 
                 {order.items.map((it) => (
                   <BookingDetailsSummary key={it.id} details={it.bookingDetails} className="mt-2 max-w-md" />
                 ))}
+                <OrderNote note={order.note} />
               </div>
               {order.paymentMethod === 'COD' && (
               <button
@@ -177,6 +201,7 @@ export function ShopOrdersSection({ listingId, sellerId }: { listingId: string; 
                 {' · '}
                 {new Date(order.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </p>
+              <OrderNote note={order.note} />
               <DeliveryPartnerCard order={order} viewer="seller" />
             </div>
           ))}
