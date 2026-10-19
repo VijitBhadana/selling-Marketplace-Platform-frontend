@@ -17,7 +17,15 @@ import { BrandThemeStyle } from '@/components/brand-theme-style';
 import { SiteChrome } from '@/components/site-chrome';
 import { SplashLoader } from '@/components/splash-loader';
 import { ogImageUrl } from '@/lib/seo';
-import { SITE_DESCRIPTION, SITE_DOMAIN, SITE_KEYWORDS, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/site';
+import {
+  SITE_ALTERNATE_NAMES,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_NAME,
+  SITE_SOCIAL_LINKS,
+  SITE_TAGLINE,
+  SITE_URL,
+} from '@/lib/site';
 
 const display = Manrope({ subsets: ['latin'], variable: '--font-display', weight: ['600', '700', '800'] });
 const body = Inter({ subsets: ['latin'], variable: '--font-body' });
@@ -85,12 +93,13 @@ const siteJsonLd = [
     logo: `${SITE_URL}/apple-icon`,
     description: SITE_DESCRIPTION,
     areaServed: { '@type': 'Country', name: 'India' },
+    sameAs: SITE_SOCIAL_LINKS,
   },
   {
     '@type': 'WebSite',
     '@id': `${SITE_URL}/#website`,
     name: SITE_NAME,
-    alternateName: ['Dukan Cloude', SITE_DOMAIN],
+    alternateName: SITE_ALTERNATE_NAMES,
     url: `${SITE_URL}/`,
     inLanguage: 'en-IN',
     publisher: { '@id': `${SITE_URL}/#organization` },

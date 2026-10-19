@@ -16,8 +16,19 @@ export const SITE_TAGLINE = 'Local Shops, Services, Jobs & Bookings Near You';
 export const SITE_DESCRIPTION =
   "DukanCloude is India's local marketplace — discover shops, services, jobs and bookings near you across 13 Cloudes. Post a free ad in 2 minutes with OTP-verified sellers.";
 
+// Other ways people write the brand — WebSite.alternateName in the JSON-LD.
+export const SITE_ALTERNATE_NAMES = ['Dukan Cloude', 'DukanCloud', 'Dukan Cloud', SITE_DOMAIN];
+
+// Official brand profiles — Organization.sameAs in the JSON-LD, so Google ties
+// them to this site. Add each new profile URL here (no tracking params).
+export const SITE_SOCIAL_LINKS = ['https://www.instagram.com/dukancloude'];
+
 export const SITE_KEYWORDS = [
   'DukanCloude',
+  'Dukan Cloude',
+  'DukanCloud',
+  'Dukan Cloud',
+  'dukancloude.com',
   'local marketplace India',
   'online dukan',
   'local shops near me',
