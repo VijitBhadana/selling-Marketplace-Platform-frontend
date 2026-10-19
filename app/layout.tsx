@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Manrope, Inter, Space_Grotesk, Open_Sans } from 'next/font/google';
+import { Manrope, Inter, Space_Grotesk, Open_Sans, Urbanist } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Navbar } from '@/components/navbar';
@@ -22,6 +22,7 @@ import { SITE_DESCRIPTION, SITE_DOMAIN, SITE_KEYWORDS, SITE_NAME, SITE_TAGLINE, 
 const display = Manrope({ subsets: ['latin'], variable: '--font-display', weight: ['600', '700', '800'] });
 const body = Inter({ subsets: ['latin'], variable: '--font-body' });
 const hero = Space_Grotesk({ subsets: ['latin'], variable: '--font-hero', weight: ['500', '600', '700'] });
+const urbanist = Urbanist({ subsets: ['latin'], variable: '--font-urbanist', weight: ['700'] });
 // Only the shop and bucket-list pages use Open Sans — not preloaded on every other page.
 const openSans = Open_Sans({ subsets: ['latin'], variable: '--font-open-sans', preload: false });
 
@@ -99,7 +100,7 @@ const siteJsonLd = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-IN" suppressHydrationWarning>
-      <body className={`${display.variable} ${body.variable} ${hero.variable} ${openSans.variable} font-body`}>
+      <body className={`${display.variable} ${body.variable} ${hero.variable} ${urbanist.variable} ${openSans.variable} font-body`}>
         <BrandThemeStyle />
         <TopLoader />
         <JsonLd data={siteJsonLd} />

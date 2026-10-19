@@ -11,6 +11,7 @@ import { ViewAllCloudes } from '@/components/view-all-cloudes';
 import { nearParams, type UserLocation } from '@/lib/user-location';
 import { getUserLocation } from '@/lib/user-location-server';
 import { HeroTwoColumn } from '@/components/hero-two-column';
+import { HeroTypewriter } from '@/components/hero-typewriter';
 import { ScrollReveal } from '@/components/scroll-reveal';
 import { ShopCardSkeleton, SkeletonGroup } from '@/components/skeleton';
 
@@ -39,6 +40,9 @@ const differentiators = [
   'Location-based search results',
   'Free to post — no hidden fees',
 ];
+
+// Typed one after another at the end of the hero headline.
+const HERO_PHRASES = ['one place.', 'near you.', 'zero fees.', 'one click.'];
 
 function AnimatedWords({ text, startDelay, stepMs }: { text: string; startDelay: number; stepMs: number }) {
   let charIndex = 0;
@@ -141,7 +145,7 @@ export default function HomePage() {
 
         <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 sm:pb-20 sm:pt-6">
           <HeroTwoColumn>
-            <h1 className="font-hero text-3xl font-extrabold leading-[1.1] tracking-tight text-ink sm:text-5xl">
+            <h1 className="font-urbanist text-3xl font-bold leading-[1.1] tracking-tight text-ink sm:text-5xl">
               <span className="block overflow-hidden pb-1">
                 <span className="inline-block animate-fade-in-up" style={{ animationDelay: '80ms' }}>Buy,</span>{' '}
                 <span className="inline-block animate-fade-in-up" style={{ animationDelay: '160ms' }}>sell,</span>{' '}
@@ -150,7 +154,8 @@ export default function HomePage() {
                 <span className="inline-block animate-fade-in-up" style={{ animationDelay: '400ms' }}>book</span>
               </span>
               <span className="block overflow-hidden pb-1 text-ink">
-                <AnimatedWords text="every business, one place." startDelay={480} stepMs={28} />
+                <AnimatedWords text="every business," startDelay={480} stepMs={28} />{' '}
+                <HeroTypewriter phrases={HERO_PHRASES} startDelay={1400} />
               </span>
             </h1>
 
@@ -242,7 +247,7 @@ export default function HomePage() {
               {totalCategories}+ Sub-Categories
             </span>
           </div>
-          <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
             {cloudes.map((c) => (
               <CloudeCard key={c.slug} cloude={c} />
             ))}

@@ -29,6 +29,7 @@ const config: Config = {
         display: ['var(--font-display)'],
         body: ['var(--font-body)'],
         hero: ['var(--font-hero)'],
+        urbanist: ['var(--font-urbanist)'],
         opensans: ['var(--font-open-sans)'],
       },
       borderRadius: {
