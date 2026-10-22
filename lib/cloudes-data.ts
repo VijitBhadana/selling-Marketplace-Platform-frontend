@@ -357,13 +357,13 @@ const agricultureGroups: RawGroup[] = [
     title: 'Vegetables',
     icon: 'Carrot',
     image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999',
-    items: ['Potato', 'Onion', 'Tomato', 'Cauliflower', 'Cabbage', 'Brinjal', 'Green Chilli', 'Capsicum', 'Peas', 'Spinach', 'Other Vegetables'],
+    items: ['Vegetables'],
   },
   {
     title: 'Fresh Fruits',
     icon: 'Apple',
     image: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b',
-    items: ['Litchi', 'Apple', 'Orange', 'Banana', 'Mango', 'Grapes', 'Watermelon', 'Papaya', 'Pomegranate', 'Other Fruits'],
+    items: ['Fresh Fruits'],
   },
   {
     title: 'Street Vendor / Pushcart Vendor',

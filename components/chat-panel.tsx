@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useEffect, useRef, useState } from 'react';
-import { Briefcase, Send, Store, X } from 'lucide-react';
+import { Briefcase, EyeOff, KeyRound, PackageCheck, Send, ShieldAlert, Store, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useChat } from '@/lib/chat-context';
 import { api, ApiError } from '@/lib/api';
@@ -57,6 +57,62 @@ function ChatMessagesSkeleton() {
   );
 }
 
+const SAFETY_ACK_KEY = 'chat-safety-acked-shops';
+
+function readAckedShops(): string[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SAFETY_ACK_KEY) ?? '[]');
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+const SAFETY_TIPS = [
+  { icon: KeyRound, text: 'Never share any PIN or OTP with anyone — not even the shop or delivery person.' },
+  { icon: PackageCheck, text: 'Check the product properly before paying the delivery person.' },
+  { icon: EyeOff, text: "Don't share personal information or photos with anyone." },
+];
+
+function BuyerSafetyAlert({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-ink/30 p-4">
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="chat-safety-title"
+        className="w-full max-w-sm animate-fade-in-up rounded-2xl border border-border bg-surface p-5 shadow-2xl"
+        style={{ animationDuration: '0.22s' }}
+      >
+        <div className="flex flex-col items-center text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/15 text-amber-500">
+            <ShieldAlert size={24} />
+          </span>
+          <h2 id="chat-safety-title" className="mt-3 text-base font-bold text-ink">
+            Stay safe while you chat
+          </h2>
+        </div>
+        <ul className="mt-4 space-y-3">
+          {SAFETY_TIPS.map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-start gap-3 text-sm leading-relaxed text-ink">
+              <Icon size={18} className="mt-0.5 shrink-0 text-amber-500" />
+              <span>{text}</span>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={onClose}
+          autoFocus
+          className="mt-5 w-full rounded-full bg-brand py-2.5 text-sm font-semibold text-brand-ink transition-opacity hover:opacity-90"
+        >
+          I understand
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ChatPanel() {
   const { isOpen, target, closeChat } = useChat();
   const { user, token } = useAuth();
@@ -68,6 +124,25 @@ export function ChatPanel() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Shops whose safety alert this browser has already acknowledged — shown once per shop.
+  const [ackedShops, setAckedShops] = useState<string[]>([]);
+  useEffect(() => setAckedShops(readAckedShops()), []);
+
+  // A buyer messaging a shop: a listing chat they start themselves. Seller-side opens
+  // resume a conversation (inbox) or carry an "About: …" subtitle (finance applicants).
+  const isBuyerShopChat = !!target?.listingId && !target.jobId && !target.conversationId && !target.subtitle;
+  const showSafetyAlert = isOpen && isBuyerShopChat && !ackedShops.includes(target.listingId!);
+  const ackSafety = () => {
+    const id = target?.listingId;
+    if (!id) return;
+    const next = Array.from(new Set([...readAckedShops(), ...ackedShops, id]));
+    try {
+      localStorage.setItem(SAFETY_ACK_KEY, JSON.stringify(next));
+    } catch {
+      // storage blocked — still remembered for this session via state
+    }
+    setAckedShops(next);
+  };
 
   // Start (or resume) the conversation whenever the panel opens for a new shop.
   // If a conversationId is already known (seller opening from their inbox), skip straight to it.
@@ -132,10 +207,14 @@ export function ChatPanel() {
 
   useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeChat();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (showSafetyAlert) ackSafety();
+      else closeChat();
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [isOpen, closeChat]);
+  });
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -215,6 +294,8 @@ export function ChatPanel() {
           </button>
         </form>
       </div>
+
+      {showSafetyAlert && <BuyerSafetyAlert onClose={ackSafety} />}
     </div>
   );
 }
