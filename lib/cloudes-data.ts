@@ -357,7 +357,7 @@ const agricultureGroups: RawGroup[] = [
     title: 'Vegetables',
     icon: 'Carrot',
     image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999',
-    items: ['Vegetables'],
+    items: ['Vegetables (Onion, Potato, Tomato...)'],
   },
   {
     title: 'Fresh Fruits',

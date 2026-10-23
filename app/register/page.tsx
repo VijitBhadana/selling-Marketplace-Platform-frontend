@@ -20,13 +20,16 @@ import {
   MapPin,
   Phone,
   Receipt,
+  ShieldCheck,
   ShoppingBag,
   User,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
-import { formatAadhaar, isValidAadhaar, isValidGstin } from '@/lib/seller-kyc';
+import { formatAadhaar, isValidAadhaar, isValidGstin, panProblem } from '@/lib/seller-kyc';
 import { VEHICLE_TYPES, isValidLicense, isValidVehicleNumber } from '@/lib/delivery';
 import { fileToResizedDataUrl } from '@/lib/image-utils';
+import { SITE_NAME } from '@/lib/site';
 import {
   AuthError,
   AuthField,
@@ -127,6 +130,55 @@ function PhotoField({
   );
 }
 
+const sellerKycReasons: { icon: LucideIcon; title: string; text: string }[] = [
+  {
+    icon: Fingerprint,
+    title: 'Aadhaar — proves you are a real person',
+    text: 'Stops fake seller accounts. Your full Aadhaar number is never stored — only a locked code and its last 4 digits.',
+  },
+  {
+    icon: Receipt,
+    title: 'GST or PAN — verifies your business',
+    text: 'Keeps the marketplace tax-compliant and builds buyer trust. No GST? Your PAN works instead.',
+  },
+  {
+    icon: Phone,
+    title: 'Phone & email — reach you safely',
+    text: 'For OTP verification, order alerts and getting back into your account.',
+  },
+  {
+    icon: Lock,
+    title: 'Used only for security',
+    text: 'Your details are used only to verify you and prevent fraud — never sold and never shown to buyers.',
+  },
+];
+
+/** Left-panel note on the seller sign-up: why each KYC detail is asked for. */
+function SellerKycNote() {
+  return (
+    <div className="animate-fade-in-up rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+      <p className="flex items-center gap-2 text-sm font-semibold">
+        <ShieldCheck size={17} className="text-brand" /> Why we ask for these details
+      </p>
+      <ul className="mt-4 space-y-3.5">
+        {sellerKycReasons.map(({ icon: Icon, title, text }) => (
+          <li key={title} className="flex gap-3">
+            <Icon size={15} className="mt-0.5 shrink-0 text-brand" />
+            <div>
+              <p className="text-[13px] font-semibold">{title}</p>
+              <p className="mt-0.5 text-xs leading-snug text-white/55">{text}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 border-t border-white/10 pt-3.5 text-xs leading-snug text-white/70">
+        Your details stay completely secure with {SITE_NAME}. We collect them only for security purposes, and they are never
+        shared or leaked outside.
+      </p>
+    </div>
+  );
+}
+
 // Error line under the Aadhaar / GST inputs — shown only once a full-length value fails the check.
 function KycError({ value, length, valid, message }: { value: string; length: number; valid: boolean; message: string }) {
   if (value.length !== length || valid) return null;
@@ -137,15 +189,17 @@ function KycError({ value, length, valid, message }: { value: string; length: nu
   );
 }
 
-function RegisterForm() {
+// The role lives in RegisterPage so the brand panel can show the seller KYC note.
+function RegisterForm({ role, setRole }: { role: Role; setRole: (role: Role) => void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<Role>('BUYER');
   const [aadhaar, setAadhaar] = useState('');
   const [gstin, setGstin] = useState('');
+  // Sellers without GST give their PAN instead.
+  const [pan, setPan] = useState('');
   // Delivery partners only.
   const [aadhaarImage, setAadhaarImage] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
@@ -196,12 +250,25 @@ function RegisterForm() {
         return;
       }
     }
-    if (isSeller && gstin.length !== 15) {
+    if (isSeller && !gstin && !pan) {
+      setError("Please enter your GST number — or your PAN if you don't have GST.");
+      return;
+    }
+    if (isSeller && gstin && gstin.length !== 15) {
       setError(`GST number must be exactly 15 characters — you entered ${gstin.length}.`);
       return;
     }
-    if (isSeller && !isValidGstin(gstin)) {
+    if (isSeller && gstin && !isValidGstin(gstin)) {
       setError('This GST number is not valid. Please check it against your GST certificate.');
+      return;
+    }
+    if (isSeller && pan && pan.length !== 10) {
+      setError(`PAN must be exactly 10 characters — you entered ${pan.length}.`);
+      return;
+    }
+    const badPan = isSeller && pan ? panProblem(pan, name, gstin) : null;
+    if (badPan) {
+      setError(badPan);
       return;
     }
     setLoading(true);
@@ -212,7 +279,7 @@ function RegisterForm() {
         password,
         phone,
         role,
-        ...(isSeller ? { aadhaar, gstin } : {}),
+        ...(isSeller ? { aadhaar, gstin: gstin || undefined, pan: pan || undefined } : {}),
         ...(isDelivery
           ? {
               aadhaar,
@@ -450,8 +517,8 @@ function RegisterForm() {
           <>
             <AuthField
               id="register-gstin"
-              label="GST number"
-              hint="Required for sellers"
+              label={pan ? 'GST number' : 'GST number *'}
+              hint="No GST? Add your PAN below"
               icon={Receipt}
               after={
                 <KycError
@@ -464,13 +531,41 @@ function RegisterForm() {
             >
               <input
                 id="register-gstin"
-                required
+                required={!pan}
                 autoComplete="off"
                 autoCapitalize="characters"
                 spellCheck={false}
                 maxLength={15}
                 value={gstin}
                 onChange={(e) => setGstin(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15))}
+                className={`${authInputClass} pl-11 pr-4 uppercase`}
+              />
+            </AuthField>
+
+            <AuthField
+              id="register-pan"
+              label={gstin ? 'PAN number' : 'PAN number *'}
+              hint={gstin ? 'Optional with GST' : 'Required if you have no GST'}
+              icon={IdCard}
+              after={
+                pan.length === 10 &&
+                panProblem(pan, name, gstin) && (
+                  <p className="mt-2 flex items-start gap-1.5 text-xs text-accent">
+                    <AlertCircle size={13} strokeWidth={2.5} className="mt-px shrink-0" /> {panProblem(pan, name, gstin)}
+                  </p>
+                )
+              }
+            >
+              <input
+                id="register-pan"
+                required={!gstin}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                maxLength={10}
+                value={pan}
+                onChange={(e) => setPan(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 10))}
+                placeholder="ABCPE1234F"
                 className={`${authInputClass} pl-11 pr-4 uppercase`}
               />
             </AuthField>
@@ -538,15 +633,17 @@ function RegisterForm() {
 }
 
 export default function RegisterPage() {
+  const [role, setRole] = useState<Role>('BUYER');
   return (
     <AuthShell
       panelTitle="Open your dukan on the cloud."
       panelText="Join buyers and sellers discovering shops, services, jobs and bookings near them."
+      panelExtra={role === 'SELLER' ? <SellerKycNote /> : undefined}
       title="Create your account"
       subtitle="Buy, sell, and book across every Cloude."
     >
       <Suspense fallback={<AuthFormFallback fields={5} />}>
-        <RegisterForm />
+        <RegisterForm role={role} setRole={setRole} />
       </Suspense>
     </AuthShell>
   );

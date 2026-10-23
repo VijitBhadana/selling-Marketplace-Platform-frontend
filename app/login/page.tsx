@@ -39,6 +39,14 @@ function LoginForm() {
         router.push(next || '/');
       }
     } catch (err) {
+      // Signed up but never entered the email OTP — a fresh code was just sent.
+      if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
+        const params = new URLSearchParams({ email });
+        if (next) params.set('next', next);
+        startTopLoader(`/verify-otp?${params.toString()}`);
+        router.push(`/verify-otp?${params.toString()}`);
+        return;
+      }
       setError(err instanceof ApiError ? err.message : 'Could not log in. Make sure the backend server is running.');
       setLoading(false);
     }

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { Lock, ShoppingBag, Tag, X } from 'lucide-react';
 import { useAuth, type AuthIntent } from '@/lib/auth-context';
+import { ApiError } from '@/lib/api';
 
 const INTENT_COPY: Record<AuthIntent, { title: string; subtitle: string; icon: React.ReactNode }> = {
   default: {
@@ -29,6 +31,8 @@ export function AuthModal() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isAuthModalOpen) {
@@ -60,7 +64,13 @@ export function AuthModal() {
     setLoading(true);
     try {
       await login(email, password);
-    } catch {
+    } catch (err) {
+      // Signed up but never entered the email OTP — a fresh code was just sent.
+      if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
+        hideAuthModal();
+        router.push(`/verify-otp?${new URLSearchParams({ email, next: pathname }).toString()}`);
+        return;
+      }
       setError('Could not log in. Check your details, or make sure the backend server is running.');
       setLoading(false);
     }

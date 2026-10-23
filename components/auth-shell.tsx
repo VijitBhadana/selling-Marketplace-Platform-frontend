@@ -25,12 +25,15 @@ export const authSubmitClass =
 export function AuthShell({
   panelTitle,
   panelText,
+  panelExtra,
   title,
   subtitle,
   children,
 }: {
   panelTitle: string;
   panelText: string;
+  /** Shown under the logo in the brand panel (e.g. the seller KYC note on register). */
+  panelExtra?: React.ReactNode;
   title: string;
   subtitle: string;
   children: React.ReactNode;
@@ -50,11 +53,14 @@ export function AuthShell({
             <div className="absolute -bottom-32 -right-20 h-80 w-80 rounded-full bg-accent/30 blur-[90px]" />
           </div>
 
-          <div className="relative flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-brand-ink shadow-lg shadow-brand/30">
-              <Cloud size={20} strokeWidth={2.2} />
-            </span>
-            <span className="font-display text-lg font-bold tracking-tight">{SITE_NAME}</span>
+          <div className="relative">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-brand-ink shadow-lg shadow-brand/30">
+                <Cloud size={20} strokeWidth={2.2} />
+              </span>
+              <span className="font-display text-lg font-bold tracking-tight">{SITE_NAME}</span>
+            </div>
+            {panelExtra && <div className="mt-8">{panelExtra}</div>}
           </div>
 
           <div className="relative my-12">

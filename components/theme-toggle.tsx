@@ -13,7 +13,7 @@ export const ThemeToggle = memo(function ThemeToggle({ bare = false }: { bare?: 
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
-    return <div className={`rounded-full ${bare ? 'h-8 w-8 md:h-9 md:w-9' : 'h-9 w-9 border border-border'}`} aria-hidden />;
+    return <div className={`rounded-full ${bare ? 'h-8 w-7 md:h-9 md:w-9' : 'h-9 w-9 border border-border'}`} aria-hidden />;
   }
 
   const isDark = resolvedTheme === 'dark';

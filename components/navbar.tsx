@@ -297,8 +297,9 @@ export function Navbar() {
           <div className="flex min-w-0 flex-col md:hidden">
             <Link href="/" tabIndex={-1} aria-hidden className="flex min-w-0 items-center gap-1.5 leading-none">
               <span className="min-w-0 shrink">
-                <Image src="/dukancloude-logo-wordmark.png" alt="DukanCloude" width={136} height={16} priority className="h-4 w-auto max-w-full dark:hidden" />
-                <Image src="/dukancloude-logo-wordmark-dark.png" alt="DukanCloude" width={136} height={16} priority className="hidden h-4 w-auto max-w-full dark:block" />
+                {/* object-contain: on very narrow phones it scales down evenly instead of squashing the letters */}
+                <Image src="/dukancloude-logo-wordmark.png" alt="DukanCloude" width={153} height={18} priority className="h-[18px] w-auto max-w-full object-contain object-left dark:hidden" />
+                <Image src="/dukancloude-logo-wordmark-dark.png" alt="DukanCloude" width={153} height={18} priority className="hidden h-[18px] w-auto max-w-full object-contain object-left dark:block" />
               </span>
               <span className="shrink-0 rounded-md border border-brand/40 bg-brand-soft px-1 py-0.5 text-[8px] font-bold tracking-[0.12em] text-brand max-[359px]:hidden">
                 BETA
@@ -311,7 +312,7 @@ export function Navbar() {
         {/* Search — desktop */}
         <DesktopSearch />
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-2 lg:gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-2 lg:gap-3">
           <button
             type="button"
             onClick={handlePostAdClick}
@@ -329,7 +330,7 @@ export function Navbar() {
           </button>
 
           {/* Grouped toolbar — deliberately not positioned, so the menus' mobile dropdowns still anchor to the header */}
-          <div className="flex items-center gap-0.5 rounded-full border border-border bg-surface/70 p-1 shadow-sm">
+          <div className="flex items-center gap-0 rounded-full border border-border bg-surface/70 px-0.5 py-1 shadow-sm md:gap-0.5 md:p-1">
             {!loading && user?.role === 'SELLER' ? (
               <SellerInboxMenu />
             ) : (
@@ -347,7 +348,14 @@ export function Navbar() {
             )}
             {!loading && <MyShopsMenu />}
             {!loading && <NotificationsMenu />}
-            <ThemeToggle bare />
+            {/* Sellers get an extra icon (My Shops) — on phones the theme toggle moves into the menu so the logo isn't squeezed. */}
+            {!loading && user?.role === 'SELLER' ? (
+              <span className="hidden md:flex">
+                <ThemeToggle bare />
+              </span>
+            ) : (
+              <ThemeToggle bare />
+            )}
           </div>
 
           {loading ? (
@@ -453,10 +461,28 @@ export function Navbar() {
             </Link>
           )}
 
+          {/* Phones, signed in: the menu button doubles as the profile avatar (no room for both); the small badge keeps the menu cue. */}
+          {!loading && user && (
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand/70 text-sm font-bold text-brand-ink transition-transform active:scale-95 sm:hidden"
+              aria-label="Toggle menu"
+              aria-expanded={open}
+            >
+              {user.name?.charAt(0).toUpperCase() ?? 'U'}
+              <span className="absolute -bottom-1 -right-1 flex h-[18px] w-[18px] items-center justify-center rounded-full border border-border bg-surface text-ink">
+                {open ? <X size={11} strokeWidth={2.75} /> : <Menu size={11} strokeWidth={2.75} />}
+              </span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface/70 text-ink transition-colors hover:bg-surface-hover md:hidden"
+            className={`h-9 w-9 items-center justify-center rounded-full border border-border bg-surface/70 text-ink transition-colors hover:bg-surface-hover md:hidden ${
+              !loading && user ? 'hidden sm:flex' : 'flex'
+            }`}
             aria-label="Toggle menu"
             aria-expanded={open}
           >
@@ -526,6 +552,11 @@ export function Navbar() {
                   <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
                   <p className="truncate text-xs text-ink-muted">{user.email}</p>
                 </div>
+                {user.role === 'SELLER' && (
+                  <span className="ml-auto shrink-0">
+                    <ThemeToggle />
+                  </span>
+                )}
               </div>
             )}
           </div>

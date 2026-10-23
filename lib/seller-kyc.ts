@@ -1,5 +1,5 @@
 // Client-side mirror of backend/src/modules/auth/seller-kyc.ts so the seller sign-up
-// form can flag a mistyped Aadhaar / GSTIN before submitting. The backend re-checks.
+// form can flag a mistyped Aadhaar / GSTIN / PAN before submitting. The backend re-checks.
 
 const VERHOEFF_D = [
   [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -53,4 +53,24 @@ export function isValidGstin(gstin: string) {
     sum += Math.floor(product / 36) + (product % 36);
   }
   return GSTIN_CHARS[(36 - (sum % 36)) % 36] === gstin[14];
+}
+
+// PAN: 5 letters + 4 digits + 1 letter. The 4th letter is the holder type (P = person,
+// C = company, F = firm, H = HUF, ...); for a person the 5th is their surname's initial.
+const PAN_HOLDER_TYPES = 'ABCFGHJLPT';
+
+export function isValidPan(pan: string) {
+  return /^[A-Z]{5}\d{4}[A-Z]$/.test(pan) && PAN_HOLDER_TYPES.includes(pan[3]) && pan.slice(5, 9) !== '0000';
+}
+
+/** Why this PAN can't be accepted for this seller, or null if it's fine. */
+export function panProblem(pan: string, name: string, gstin: string) {
+  if (!isValidPan(pan)) return 'This is not a valid PAN — it looks like "ABCPE1234F" on your PAN card.';
+  // A GSTIN carries its holder's PAN in characters 3–12.
+  if (gstin.length === 15 && gstin.slice(2, 12) !== pan) return 'This PAN does not match your GST number.';
+  const words = name.toUpperCase().split(/[^A-Z]+/).filter(Boolean);
+  if (pan[3] === 'P' && words.length > 1 && !words.some((w) => w[0] === pan[4])) {
+    return `The 5th letter of a personal PAN is your surname's first letter — it doesn't match "${name.trim()}".`;
+  }
+  return null;
 }

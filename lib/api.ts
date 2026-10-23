@@ -24,9 +24,12 @@ type ApiOptions = {
 // so callers can show the real reason instead of a generic fallback string.
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** Machine-readable reason, when the backend sends one (e.g. 'EMAIL_NOT_VERIFIED'). */
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -74,13 +77,15 @@ async function request<T>(path: string, opts: ApiOptions): Promise<T> {
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     let message = text;
+    let code: string | undefined;
     try {
       const parsed = JSON.parse(text);
       message = Array.isArray(parsed?.message) ? parsed.message.join(', ') : parsed?.message ?? text;
+      code = typeof parsed?.code === 'string' ? parsed.code : undefined;
     } catch {
       // body wasn't JSON — fall back to the raw text
     }
-    throw new ApiError(res.status, message || `Request failed (${res.status})`);
+    throw new ApiError(res.status, message || `Request failed (${res.status})`, code);
   }
 
   // DELETEs that return nothing send an empty body, which res.json() would reject.
@@ -253,6 +258,8 @@ export const api = {
       role?: 'BUYER' | 'SELLER' | 'DELIVERY';
       aadhaar?: string;
       gstin?: string;
+      // Sellers without a GST number.
+      pan?: string;
       // Delivery partners only.
       aadhaarImage?: string;
       licenseNumber?: string;
