@@ -8,6 +8,8 @@ export const metadata = pageMetadata({
   description:
     'Browse IT, operational and skilled-trade jobs near you on DukanCloude. Apply in one click or call the employer directly.',
   path: '/jobs',
+  // Placeholder demo jobs — keep them out of search results. Real jobs live at /jobs/[id].
+  noindex: true,
 });
 
 export default function JobsPage() {

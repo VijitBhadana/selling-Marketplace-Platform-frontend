@@ -150,6 +150,9 @@ export type Advertisement = {
   createdAt: string;
 };
 
+/** One row of GET /listings/sitemap or /jobs/sitemap. Older backends send no category. */
+export type SitemapEntry = { id: string; updatedAt: string; category?: { slug: string; cloude: { slug: string } } };
+
 export type AdAudience = 'ALL' | 'BUYER' | 'SELLER';
 
 /** Admin view: who it's for, when it stops, and how many of them have seen (closed) it. */
@@ -175,7 +178,7 @@ export const api = {
       ).toString();
       return apiFetch<FreshItem[]>(`/listings/fresh?${qs}`, { revalidate: 30 });
     },
-    sitemap: () => apiFetch<{ id: string; updatedAt: string }[]>('/listings/sitemap', { revalidate: 3600 }),
+    sitemap: () => apiFetch<SitemapEntry[]>('/listings/sitemap', { revalidate: 3600 }),
     create: (body: unknown, token: string) => apiFetch('/listings', { method: 'POST', body, token }),
     mine: (token: string) => apiFetch('/listings/mine', { token }),
     remove: (id: string, token: string) => apiFetch(`/listings/${id}`, { method: 'DELETE', token }),
@@ -203,6 +206,8 @@ export const api = {
       return apiFetch(`/jobs${qs ? `?${qs}` : ''}`);
     },
     byId: (id: string) => apiFetch(`/jobs/${id}`),
+    /** Open jobs for sitemap.xml — cached like the listings one. */
+    sitemap: () => apiFetch<SitemapEntry[]>('/jobs/sitemap', { revalidate: 3600 }),
     create: (body: unknown, token: string) => apiFetch('/jobs', { method: 'POST', body, token }),
     mine: (token: string) => apiFetch('/jobs/mine', { token }),
     remove: (id: string, token: string) => apiFetch(`/jobs/${id}`, { method: 'DELETE', token }),

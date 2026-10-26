@@ -17,6 +17,7 @@ import { distanceKm, nearParams } from '@/lib/user-location';
 import { getUserLocation } from '@/lib/user-location-server';
 import { FALLBACK_LISTING_IMAGE } from '@/lib/image-utils';
 import { breadcrumbJsonLd, ogImageUrl, pageMetadata, type JsonLdNode } from '@/lib/seo';
+import { categoryKey, getSitemapEntries } from '@/lib/sitemap-data';
 import { absoluteUrl } from '@/lib/site';
 
 type Props = { params: { slug: string }; searchParams: { category?: string } };
@@ -25,7 +26,7 @@ export function generateStaticParams() {
   return cloudes.map((c) => ({ slug: c.slug }));
 }
 
-export function generateMetadata({ params, searchParams }: Props): Metadata {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const cloude = getCloudeBySlug(params.slug);
   if (!cloude) return {};
   const category = searchParams.category
@@ -33,11 +34,15 @@ export function generateMetadata({ params, searchParams }: Props): Metadata {
     : undefined;
 
   if (category) {
+    // A category with no real shop or job is a near-duplicate of every other empty
+    // one — keep it out of the index until something is posted in it.
+    const { filledCategories } = await getSitemapEntries();
     return pageMetadata({
       title: `${category.name} Near You — ${cloude.name}`,
       description: `Find ${category.name} shops and service providers near you on DukanCloude. Browse verified local sellers, contact them directly, or list your own business free.`,
       path: `/cloudes/${cloude.slug}?category=${category.slug}`,
       image: ogImageUrl(`${category.name} Near You`, cloude.name),
+      noindex: !!filledCategories && !filledCategories.has(categoryKey(cloude.slug, category.slug)),
     });
   }
 

@@ -102,7 +102,8 @@ export default async function JobDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <JsonLd data={[breadcrumbJsonLd(crumbs), jobPostingJsonLd(job)]} />
+      {/* Google treats JobPosting markup on a closed job as an expired-listing violation. */}
+      <JsonLd data={job.isClosed ? [breadcrumbJsonLd(crumbs)] : [breadcrumbJsonLd(crumbs), jobPostingJsonLd(job)]} />
       <nav className="mb-4 text-sm text-ink-muted">
         <Link href="/" className="hover:text-brand">Home</Link>
         <span className="mx-1.5">/</span>
