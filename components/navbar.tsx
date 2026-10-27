@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, Search, X, PlusCircle, Plus, ArrowRight, UserRound, ChevronRight, ShoppingBasket, LayoutGrid, LogOut, ChevronDown, Store, ShoppingBag, ShieldCheck, Bike } from 'lucide-react';
+import { Menu, Search, X, PlusCircle, Plus, ArrowRight, UserRound, ChevronLeft, ChevronRight,ShoppingBasket, LayoutGrid, LogOut, ChevronDown, Store, ShoppingBag, ShieldCheck, Bike } from 'lucide-react';
 import { cloudes } from '@/lib/cloudes-data';
 import { ThemeToggle } from './theme-toggle';
 import { Icon } from './icon';
@@ -42,6 +42,8 @@ const chipBase =
   'group flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md';
 const chipActive = 'border-brand bg-brand text-brand-ink shadow-[0_2px_8px_-2px_rgb(var(--brand)/calc(0.5*var(--glow)))]';
 const chipIdle = 'border-border bg-surface text-ink-muted hover:border-brand hover:bg-brand-soft hover:text-brand';
+const stripArrow =
+  'flex h-9 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-ink-muted shadow-sm transition-colors enabled:hover:border-brand enabled:hover:bg-brand-soft enabled:hover:text-brand disabled:cursor-default disabled:opacity-40';
 
 const isCloudeActive = (pathname: string | null, slug: string) =>
   pathname === `/cloudes/${slug}` || !!pathname?.startsWith(`/cloudes/${slug}/`);
@@ -151,28 +153,63 @@ const MobileSearch = memo(function MobileSearch() {
 
 /** Desktop row of Cloude chips under the search bar. */
 const CloudeStrip = memo(function CloudeStrip({ pathname }: { pathname: string | null }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+
+  // Each arrow is enabled only while that side has more chips hidden off-screen.
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const update = () => {
+      setCanLeft(el.scrollLeft > 2);
+      setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', update);
+      ro.disconnect();
+    };
+  }, []);
+
+  const scrollBy = (dir: 1 | -1) => {
+    const el = scrollerRef.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.4, behavior: 'smooth' });
+  };
+
   return (
-    <div className="no-scrollbar mx-auto flex max-w-7xl gap-2 overflow-x-auto px-6 py-2.5 text-sm [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)]">
-      <Link href="/" className={`${chipBase} ${pathname === '/' ? chipActive : chipIdle}`}>
-        <LayoutGrid
-          size={14}
-          className={pathname === '/' ? 'text-brand-ink' : 'text-ink-muted transition-colors group-hover:text-brand'}
-        />
-        All
-      </Link>
-      {cloudes.map((c) => {
-        const active = isCloudeActive(pathname, c.slug);
-        return (
-          <Link key={c.slug} href={`/cloudes/${c.slug}`} className={`${chipBase} ${active ? chipActive : chipIdle}`}>
-            <Icon
-              name={c.icon}
-              size={14}
-              className={active ? 'text-brand-ink' : `${iconColor(c.slug)} transition-transform group-hover:scale-110`}
-            />
-            {c.name.replace(' Cloude', '')}
-          </Link>
-        );
-      })}
+    <div className="mx-auto flex max-w-7xl items-center gap-1 px-3">
+      <button type="button" onClick={() => scrollBy(-1)} disabled={!canLeft} aria-label="Scroll Cloudes left" className={stripArrow}>
+        <ChevronLeft size={18} />
+      </button>
+      <div ref={scrollerRef} className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto px-3 py-2.5 text-sm [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)]">
+        <Link href="/" className={`${chipBase} ${pathname === '/' ? chipActive : chipIdle}`}>
+          <LayoutGrid
+            size={14}
+            className={pathname === '/' ? 'text-brand-ink' : 'text-ink-muted transition-colors group-hover:text-brand'}
+          />
+          Home
+        </Link>
+        {cloudes.map((c) => {
+          const active = isCloudeActive(pathname, c.slug);
+          return (
+            <Link key={c.slug} href={`/cloudes/${c.slug}`} className={`${chipBase} ${active ? chipActive : chipIdle}`}>
+              <Icon
+                name={c.icon}
+                size={14}
+                className={active ? 'text-brand-ink' : `${iconColor(c.slug)} transition-transform group-hover:scale-110`}
+              />
+              {c.name.replace(' Cloude', '')}
+            </Link>
+          );
+        })}
+      </div>
+      <button type="button" onClick={() => scrollBy(1)} disabled={!canRight} aria-label="Scroll Cloudes right" className={stripArrow}>
+        <ChevronRight size={18} />
+      </button>
     </div>
   );
 });
@@ -187,7 +224,7 @@ const MobileCloudeGrid = memo(function MobileCloudeGrid({ pathname }: { pathname
     <div className="mb-4 grid grid-cols-2 gap-2">
       <Link href="/" className={`${mobileTile} ${pathname === '/' ? mobileTileActive : mobileTileIdle}`}>
         <LayoutGrid size={15} className={pathname === '/' ? 'text-brand' : 'text-ink-muted/70'} />
-        <span className="flex-1 truncate">All</span>
+        <span className="flex-1 truncate">Home</span>
         <ChevronRight size={14} className="shrink-0 opacity-50" />
       </Link>
       {cloudes.map((c) => (

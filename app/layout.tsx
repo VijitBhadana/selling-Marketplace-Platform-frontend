@@ -90,7 +90,7 @@ const siteJsonLd = [
     '@id': `${SITE_URL}/#organization`,
     name: SITE_NAME,
     url: `${SITE_URL}/`,
-    logo: `${SITE_URL}/apple-icon`,
+    logo: `${SITE_URL}/icon.png`,
     description: SITE_DESCRIPTION,
     areaServed: { '@type': 'Country', name: 'India' },
     sameAs: SITE_SOCIAL_LINKS,
