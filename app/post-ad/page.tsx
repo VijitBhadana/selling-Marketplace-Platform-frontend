@@ -45,6 +45,7 @@ import {
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { fileToResizedDataUrl, withImageParams } from '@/lib/image-utils';
+import { locationErrorMessage } from '@/lib/user-location';
 import { Skeleton, SkeletonGroup } from '@/components/skeleton';
 
 const MAX_PHOTOS = 12;
@@ -157,11 +158,7 @@ function PostAdForm() {
       },
       (err) => {
         setLocating(false);
-        setLocationError(
-          err.code === err.PERMISSION_DENIED
-            ? 'Location permission denied — please enter your city manually.'
-            : 'Could not get your location — please enter it manually.',
-        );
+        setLocationError(locationErrorMessage(err, 'enter your city manually'));
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );

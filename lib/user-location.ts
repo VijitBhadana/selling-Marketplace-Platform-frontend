@@ -111,6 +111,22 @@ function round(n: number) {
 }
 
 /**
+ * Why getCurrentPosition failed, worded so the visitor can fix it. Once a site's location
+ * permission is blocked (or auto-blocked after dismissed prompts) the browser never asks
+ * again, so the only way back is the site settings.
+ */
+export function locationErrorMessage(err: GeolocationPositionError, fallback = 'type your city instead') {
+  if (err.code === err.PERMISSION_DENIED) {
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      return `Location only works on a secure (https://) page — ${fallback}.`;
+    }
+    return `Location is blocked for this site. Tap the lock icon next to the address bar → Permissions → Location → Allow, then try again — or ${fallback}.`;
+  }
+  if (err.code === err.TIMEOUT) return `Finding your location took too long — try again, or ${fallback}.`;
+  return `Could not get your location — check your phone's Location is turned on, or ${fallback}.`;
+}
+
+/**
  * Browser geolocation → city + pincode via OpenStreetMap's reverse geocoder (same lookup
  * the Post Ad form uses). Rejects with a message the picker can show as-is.
  */
@@ -137,14 +153,7 @@ export function detectLocation(): Promise<UserLocation> {
           reject(new Error('Could not detect your location — type your city instead.'));
         }
       },
-      (err) =>
-        reject(
-          new Error(
-            err.code === err.PERMISSION_DENIED
-              ? 'Location permission denied — type your city instead.'
-              : 'Could not get your location — type your city instead.',
-          ),
-        ),
+      (err) => reject(new Error(locationErrorMessage(err))),
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60 * 1000 },
     );
   });
