@@ -21,7 +21,10 @@ export const SITE_ALTERNATE_NAMES = ['Dukan Cloude', 'DukanCloud', 'Dukan Cloud'
 
 // Official brand profiles — Organization.sameAs in the JSON-LD, so Google ties
 // them to this site. Add each new profile URL here (no tracking params).
-export const SITE_SOCIAL_LINKS = ['https://www.instagram.com/dukancloude'];
+export const SITE_SOCIAL_LINKS = [
+  'https://www.instagram.com/dukancloude',
+  'https://www.facebook.com/profile.php?id=61593463500038',
+];
 
 export const SITE_KEYWORDS = [
   'DukanCloude',

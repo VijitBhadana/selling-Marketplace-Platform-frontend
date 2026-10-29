@@ -383,10 +383,15 @@ export function Navbar() {
                 )}
               </Link>
             )}
-            {!loading && <MyShopsMenu />}
+            {/* Phones, signed in: only the two key icons stay here (bucket/inbox + notifications);
+                My Shops and the theme toggle move into the mobile menu. */}
+            {!loading && (
+              <span className="hidden md:flex">
+                <MyShopsMenu />
+              </span>
+            )}
             {!loading && <NotificationsMenu />}
-            {/* Sellers get an extra icon (My Shops) — on phones the theme toggle moves into the menu so the logo isn't squeezed. */}
-            {!loading && user?.role === 'SELLER' ? (
+            {!loading && user ? (
               <span className="hidden md:flex">
                 <ThemeToggle bare />
               </span>
@@ -542,7 +547,7 @@ export function Navbar() {
           open ? 'grid-rows-[1fr] border-t opacity-100' : 'grid-rows-[0fr] opacity-0'
         }`}
       >
-        <div className="min-h-0 px-4">
+        <div className="max-h-[calc(100dvh-4rem)] min-h-0 overflow-y-auto px-4">
           <div className="animate-slide-down py-4">
             <LocationPicker variant="mobile" />
             <MobileSearch />
@@ -555,6 +560,7 @@ export function Navbar() {
                 <ShieldCheck size={15} /> Admin panel
               </Link>
             )}
+            {!loading && <MyShopsMenu variant="menu" />}
             <div className="flex gap-2 border-t border-border pt-4">
               <button
                 type="button"
@@ -589,11 +595,9 @@ export function Navbar() {
                   <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
                   <p className="truncate text-xs text-ink-muted">{user.email}</p>
                 </div>
-                {user.role === 'SELLER' && (
-                  <span className="ml-auto shrink-0">
-                    <ThemeToggle />
-                  </span>
-                )}
+                <span className="ml-auto shrink-0">
+                  <ThemeToggle />
+                </span>
               </div>
             )}
           </div>

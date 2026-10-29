@@ -3,7 +3,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Briefcase, Loader2, Store, PlusCircle, Trash2 } from 'lucide-react';
+import { Briefcase, ChevronDown, Loader2, Store, PlusCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { withImageParams } from '@/lib/image-utils';
@@ -28,9 +28,10 @@ type MyJob = {
   _count?: { applications: number };
 };
 
-// Takes no props — memoized so it doesn't re-render whenever Navbar re-renders
-// for unrelated reasons (search input typing, scroll state, profile toggle).
-export const MyShopsMenu = memo(function MyShopsMenu() {
+// Memoized so it doesn't re-render whenever Navbar re-renders for unrelated
+// reasons (search input typing, scroll state, profile toggle).
+// `menu` renders a full-width row whose list opens inline — used in the phone menu.
+export const MyShopsMenu = memo(function MyShopsMenu({ variant = 'icon' }: { variant?: 'icon' | 'menu' }) {
   const { user, token } = useAuth();
   const [open, setOpen] = useState(false);
   const [shops, setShops] = useState<MyShop[] | null>(null);
@@ -141,19 +142,40 @@ export const MyShopsMenu = memo(function MyShopsMenu() {
   const hasAnything = (shops?.length ?? 0) + (jobs?.length ?? 0) > 0;
 
   return (
-    <div className="sm:relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="My shops"
-        aria-expanded={open}
-        className={navIconButtonClass(open)}
-      >
-        <Store size={17} />
-      </button>
+    <div className={variant === 'menu' ? 'mb-3' : 'sm:relative'} ref={ref}>
+      {variant === 'menu' ? (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+            open ? 'border-brand bg-brand-soft text-brand' : 'border-border text-ink hover:border-brand hover:bg-brand-soft hover:text-brand'
+          }`}
+        >
+          <Store size={15} />
+          <span className="flex-1 text-left">My shops</span>
+          <ChevronDown size={14} className={`shrink-0 opacity-60 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label="My shops"
+          aria-expanded={open}
+          className={navIconButtonClass(open)}
+        >
+          <Store size={17} />
+        </button>
+      )}
 
       {open && (
-        <div className="absolute inset-x-4 top-full z-50 mt-1 rounded-2xl sm:inset-x-auto sm:right-0 sm:top-[calc(100%+8px)] sm:mt-0 sm:w-80 border border-border bg-surface p-2 shadow-[0_16px_40px_-14px_rgb(0_0_0_/_0.3)]">
+        <div
+          className={
+            variant === 'menu'
+              ? 'mt-2 rounded-2xl border border-border bg-surface p-2'
+              : 'absolute inset-x-4 top-full z-50 mt-1 rounded-2xl sm:inset-x-auto sm:right-0 sm:top-[calc(100%+8px)] sm:mt-0 sm:w-80 border border-border bg-surface p-2 shadow-[0_16px_40px_-14px_rgb(0_0_0_/_0.3)]'
+          }
+        >
           <div className="flex items-center justify-between px-2.5 py-2">
             <p className="text-sm font-semibold text-ink">My shops</p>
             <Link href="/post-ad" onClick={() => setOpen(false)} className="flex items-center gap-1 text-xs font-medium text-brand hover:underline">
