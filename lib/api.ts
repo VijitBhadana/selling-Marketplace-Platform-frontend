@@ -158,6 +158,25 @@ export type AdAudience = 'ALL' | 'BUYER' | 'SELLER';
 /** Admin view: who it's for, when it stops, and how many of them have seen (closed) it. */
 export type AdminAdvertisement = Advertisement & { audience: AdAudience; endsAt: string | null; seen: number; reach: number };
 
+/** Admin view of a Cloude: its categories, and what's posted under each (posted ones can't be deleted). */
+export type AdminCloude = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  sortOrder: number;
+  createdAt: string;
+  _count: { listings: number };
+  categories: {
+    id: string;
+    name: string;
+    slug: string;
+    createdAt: string;
+    _count: { listings: number; jobs: number; children: number };
+  }[];
+};
+
 export const api = {
   cloudes: {
     list: () => apiFetch('/cloudes', { revalidate: 60 }),
@@ -348,6 +367,20 @@ export const api = {
       token: string,
     ) => apiFetch<{ id: string; reach: number }>('/admin/advertisements', { method: 'POST', body, token }),
     removeAdvertisement: (id: string, token: string) => apiFetch(`/admin/advertisements/${id}`, { method: 'DELETE', token }),
+    cloudes: (token: string) => apiFetch<AdminCloude[]>('/admin/cloudes', { token }),
+    createCloude: (
+      body: { name: string; slug?: string; description?: string; icon?: string; categories?: string[] },
+      token: string,
+    ) => apiFetch<AdminCloude>('/admin/cloudes', { method: 'POST', body, token }),
+    updateCloude: (id: string, body: { name?: string; description?: string; icon?: string }, token: string) =>
+      apiFetch<AdminCloude>(`/admin/cloudes/${id}`, { method: 'PATCH', body, token }),
+    deleteCloude: (id: string, token: string) => apiFetch(`/admin/cloudes/${id}`, { method: 'DELETE', token }),
+    addCategories: (cloudeId: string, names: string[], token: string) =>
+      apiFetch<AdminCloude>(`/admin/cloudes/${cloudeId}/categories`, { method: 'POST', body: { names }, token }),
+    renameCategory: (id: string, name: string, token: string) =>
+      apiFetch<AdminCloude>(`/admin/categories/${id}`, { method: 'PATCH', body: { name }, token }),
+    deleteCategory: (id: string, token: string) =>
+      apiFetch<AdminCloude>(`/admin/categories/${id}`, { method: 'DELETE', token }),
     users: (params: Record<string, string | number | undefined>, token: string) => {
       const qs = new URLSearchParams(
         Object.entries(params).filter(([, v]) => v !== undefined && v !== '') as [string, string][],

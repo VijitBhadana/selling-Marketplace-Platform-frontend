@@ -139,6 +139,9 @@ const icons: Record<string, LucideIcon> = {
   Wrench,
 };
 
+/** Every name <Icon> can render — the choices for a Cloude's icon in the admin panel. */
+export const ICON_NAMES = Object.keys(icons).filter((name) => name !== 'Circle' && name !== 'LogIn');
+
 // Renders a lucide-react icon by its string name (used for Cloude icons stored as data/strings).
 export function Icon({ name, ...props }: { name: string } & LucideProps) {
   const Cmp = icons[name];

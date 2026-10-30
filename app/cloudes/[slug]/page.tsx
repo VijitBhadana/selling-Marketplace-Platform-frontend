@@ -3,7 +3,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, MapPin, Plus, Users } from 'lucide-react';
-import { cloudes, getCloudeBySlug, slugify, type Cloude, type CloudeCategory } from '@/lib/cloudes-data';
+import { cloudes, slugify, type Cloude, type CloudeCategory } from '@/lib/cloudes-data';
+import { getCatalogueCloude } from '@/lib/cloudes-catalogue';
 import { sampleListings } from '@/lib/sample-listings';
 import { ListingCard } from '@/components/listing-card';
 import { Icon } from '@/components/icon';
@@ -27,7 +28,7 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  const cloude = getCloudeBySlug(params.slug);
+  const cloude = await getCatalogueCloude(params.slug);
   if (!cloude) return {};
   const category = searchParams.category
     ? cloude.categories.find((c) => c.slug === searchParams.category)
@@ -86,7 +87,8 @@ function cloudeJsonLd(cloude: Cloude, category: CloudeCategory | undefined, item
 }
 
 export default async function CloudePage({ params, searchParams }: Props) {
-  const cloude = getCloudeBySlug(params.slug);
+  // Built-in Cloudes are pre-rendered from generateStaticParams; ones the admin added render on demand.
+  const cloude = await getCatalogueCloude(params.slug);
   if (!cloude) notFound();
 
   const listings = sampleListings.filter((l) => l.cloudeSlug === cloude.slug);
@@ -210,11 +212,13 @@ export default async function CloudePage({ params, searchParams }: Props) {
           </div>
 
           {/* The Jobs Cloude has its own job search below. */}
-          {!isJobBoard && <CloudeSearchBar cloudeSlug={cloude.slug} />}
+          {!isJobBoard && <CloudeSearchBar cloudeSlug={cloude.slug} categoryCount={cloude.categories.length} />}
 
           <div className="grid gap-5 md:gap-8 lg:grid-cols-[260px_1fr]">
             <CloudeCategoryPanel
               cloudeSlug={cloude.slug}
+              categories={cloude.categories}
+              groups={cloude.groups}
               activeSlug={activeCategory?.slug}
               allLabel={isJobBoard ? 'All Jobs' : 'All Shops'}
             />

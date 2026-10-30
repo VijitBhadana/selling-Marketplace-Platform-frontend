@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, Search, X, PlusCircle, Plus, ArrowRight, UserRound, ChevronLeft, ChevronRight,ShoppingBasket, LayoutGrid, LogOut, ChevronDown, Store, ShoppingBag, ShieldCheck, Bike } from 'lucide-react';
-import { cloudes } from '@/lib/cloudes-data';
+import { useCatalogue } from '@/lib/use-catalogue';
 import { ThemeToggle } from './theme-toggle';
 import { Icon } from './icon';
 import { useAuth } from '@/lib/auth-context';
@@ -153,6 +153,7 @@ const MobileSearch = memo(function MobileSearch() {
 
 /** Desktop row of Cloude chips under the search bar. */
 const CloudeStrip = memo(function CloudeStrip({ pathname }: { pathname: string | null }) {
+  const cloudes = useCatalogue();
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(false);
@@ -173,7 +174,7 @@ const CloudeStrip = memo(function CloudeStrip({ pathname }: { pathname: string |
       el.removeEventListener('scroll', update);
       ro.disconnect();
     };
-  }, []);
+  }, [cloudes]);
 
   const scrollBy = (dir: 1 | -1) => {
     const el = scrollerRef.current;
@@ -220,6 +221,7 @@ const mobileTileIdle = 'border-border text-ink-muted hover:border-brand hover:bg
 
 /** Two-column Cloude grid in the mobile menu. */
 const MobileCloudeGrid = memo(function MobileCloudeGrid({ pathname }: { pathname: string | null }) {
+  const cloudes = useCatalogue();
   return (
     <div className="mb-4 grid grid-cols-2 gap-2">
       <Link href="/" className={`${mobileTile} ${pathname === '/' ? mobileTileActive : mobileTileIdle}`}>

@@ -5,6 +5,7 @@ import { cache } from 'react';
 import { Heart, MapPin, Clock, ShieldAlert } from 'lucide-react';
 import { sampleListings } from '@/lib/sample-listings';
 import { getCloudeBySlug, type Cloude } from '@/lib/cloudes-data';
+import { getCatalogueCloude } from '@/lib/cloudes-catalogue';
 import { SellerContactActions } from '@/components/seller-contact-actions';
 import { PostedListingDetail } from '@/components/posted-listing-detail';
 import { ShopDetailHeader } from '@/components/shop-detail-header';
@@ -153,13 +154,17 @@ export default async function ListingDetailPage({ params }: Props) {
   // (visible to every visitor) or, if the backend can't find it either, a
   // local-only demo ad posted in this same browser while offline.
   const dbListing = await getDbListing(params.id);
-  if (dbListing) return <DbListingDetail listing={dbListing} />;
+  if (dbListing) {
+    // A Cloude the admin added isn't in the built-in catalogue.
+    const slug = dbListing.cloude?.slug;
+    const cloude = getCloudeBySlug(slug) ?? (await getCatalogueCloude(slug));
+    return <DbListingDetail listing={dbListing} cloude={cloude} />;
+  }
 
   return <PostedListingDetail id={params.id} />;
 }
 
-function DbListingDetail({ listing }: { listing: any }) {
-  const cloude = getCloudeBySlug(listing.cloude?.slug);
+function DbListingDetail({ listing, cloude }: { listing: any; cloude: Cloude | undefined }) {
   const image = listing.coverImageUrl || FALLBACK_LISTING_IMAGE;
   const priceLabel = listing.priceType === 'CONTACT_FOR_PRICE' ? 'Contact for price' : `₹${listing.price}`;
   const postedAgo = new Date(listing.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });

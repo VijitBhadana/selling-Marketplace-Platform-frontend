@@ -29,6 +29,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { cloudes } from '@/lib/cloudes-data';
+import { useCatalogue } from '@/lib/use-catalogue';
 import { Icon } from '@/components/icon';
 import { Stepper } from '@/components/stepper';
 import {
@@ -46,6 +47,8 @@ import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { fileToResizedDataUrl, withImageParams } from '@/lib/image-utils';
 import { locationErrorMessage } from '@/lib/user-location';
+import { certificateToDataUrl, shopCertificateFor } from '@/lib/shop-certificate';
+import { CertificateUpload } from '@/components/certificate-upload';
 import { Skeleton, SkeletonGroup } from '@/components/skeleton';
 
 const MAX_PHOTOS = 12;
@@ -95,6 +98,8 @@ const JOB_TIPS = [
 function PostAdForm() {
   const { user, token, loading, requireAuth } = useAuth();
   const searchParams = useSearchParams();
+  // Built-in Cloudes plus the admin's changes (Admin panel → Cloudes).
+  const catalogue = useCatalogue();
 
   const [step, setStep] = useState(0);
   const [cloudeSlug, setCloudeSlug] = useState<string | null>(null);
@@ -103,6 +108,9 @@ function PostAdForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
+  // Food, Clinic & Doctors and Sports & Fitness shops: the required licence / certificate photo.
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const [certificateNumber, setCertificateNumber] = useState('');
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');
   // From "Use current location" only — lets buyers ~25 km away find the shop. Cleared when
@@ -191,15 +199,24 @@ function PostAdForm() {
   useEffect(() => {
     const c = searchParams.get('cloude');
     const cat = searchParams.get('category');
-    if (c && cloudes.some((cl) => cl.slug === c)) setCloudeSlug(c);
+    // Not checked against the catalogue: an admin-added Cloude only appears in it once
+    // it's fetched, and an unknown slug simply leaves no Cloude selected.
+    if (c) setCloudeSlug(c);
     if (cat) setCategorySlug(cat);
     // "Post a job" links from a Cloude that takes both land here with ?post=job.
     if (searchParams.get('post') === 'job') setPostType('JOB');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const cloude = cloudes.find((c) => c.slug === cloudeSlug);
+  const cloude = catalogue.find((c) => c.slug === cloudeSlug);
   const category = cloude?.categories.find((c) => c.slug === categorySlug);
+  const certificate = shopCertificateFor(cloude?.slug, category?.slug, category?.name);
+
+  // A certificate picked for one category (say, Yoga Trainer) doesn't carry over to another.
+  function resetCertificate() {
+    setCertificateFile(null);
+    setCertificateNumber('');
+  }
 
   // Jobs-only Cloude, or a Cloude that takes both where the seller chose "a job".
   const canChoosePostType = !!cloude?.jobPosts && !cloude?.jobBoard;
@@ -216,11 +233,12 @@ function PostAdForm() {
     switch (step) {
       case 0: return !!categorySlug && (!isJobPost || canPostJobs);
       case 1: return isJobPost ? isJobDetailsValid(jobDraft) : title.trim().length > 0 && description.trim().length > 0;
-      case 2: return isJobPost ? isJobSkillsValid(jobDraft) : true; // photos optional for services per spec
+      // Photos are optional for services per spec; the certificate isn't, where one is needed.
+      case 2: return isJobPost ? isJobSkillsValid(jobDraft) : !certificate || !!certificateFile;
       case 3: return city.trim().length > 0;
       default: return true;
     }
-  }, [step, categorySlug, title, description, city, isJobPost, canPostJobs, jobDraft]);
+  }, [step, categorySlug, title, description, city, isJobPost, canPostJobs, jobDraft, certificate, certificateFile]);
 
   useEffect(() => {
     if (!loading && !user) requireAuth(undefined, 'post-ad');
@@ -325,6 +343,8 @@ function PostAdForm() {
       const matchedGroup = cloude.groups?.find((g) => g.items.some((it) => it.slug === category.slug));
       const stockImage = matchedGroup?.image ?? cloude.groups?.[0]?.image ?? FALLBACK_IMAGE;
       const image = photos[0] ? await fileToResizedDataUrl(photos[0].file).catch(() => stockImage) : stockImage;
+      if (certificate && !certificateFile) throw new Error(`Please upload your ${certificate.title} (Photos step).`);
+      const certificateImage = certificate && certificateFile ? await certificateToDataUrl(certificateFile) : null;
 
       await api.listings.create(
         {
@@ -338,6 +358,9 @@ function PostAdForm() {
           pincode: pincode.trim() || undefined,
           ...(coords ?? {}),
           images: [image],
+          ...(certificateImage
+            ? { certificate: { image: certificateImage, number: certificateNumber.trim() || undefined } }
+            : {}),
         },
         token,
       );
@@ -357,7 +380,11 @@ function PostAdForm() {
 
   // ---- Presentation-only values (nothing below feeds back into the form state) ----
   const cloudeShortName = cloude?.name.replace(' Cloude', '');
-  const stepCopy = (isJobPost ? JOB_STEP_COPY : AD_STEP_COPY)[step];
+  const baseStepCopy = (isJobPost ? JOB_STEP_COPY : AD_STEP_COPY)[step];
+  const stepCopy =
+    step === 2 && !isJobPost && certificate
+      ? { title: 'Certificate & photos', hint: `Your ${certificate.title} is required. Shop photos are optional.` }
+      : baseStepCopy;
   const tips = (isJobPost ? JOB_TIPS : AD_TIPS)[step] ?? [];
   const previewGroup =
     cloude?.groups?.find((g) => g.items.some((it) => it.slug === categorySlug)) ?? cloude?.groups?.[0];
@@ -367,7 +394,7 @@ function PostAdForm() {
     switch (step) {
       case 0: return !categorySlug ? 'Pick a category to continue' : 'A seller account is needed to post jobs';
       case 1: return 'Fill in the required fields to continue';
-      case 2: return 'Add at least one skill and the responsibilities';
+      case 2: return isJobPost ? 'Add at least one skill and the responsibilities' : 'Upload the certificate to continue';
       case 3: return 'Enter your city to continue';
       default: return null;
     }
@@ -558,13 +585,13 @@ function PostAdForm() {
             {step === 0 && (
               <div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {cloudes.map((c) => {
+                  {catalogue.map((c) => {
                     const selected = cloudeSlug === c.slug;
                     return (
                       <button
                         key={c.slug}
                         type="button"
-                        onClick={() => { setCloudeSlug(c.slug); setCategorySlug(null); setPostType('SHOP'); }}
+                        onClick={() => { setCloudeSlug(c.slug); setCategorySlug(null); setPostType('SHOP'); resetCertificate(); }}
                         aria-pressed={selected}
                         className={`group relative flex flex-col items-start gap-2.5 rounded-xl border p-3.5 text-left transition-all duration-200 ${
                           selected
@@ -683,7 +710,10 @@ function PostAdForm() {
                             <button
                               key={cat.slug}
                               type="button"
-                              onClick={() => setCategorySlug(cat.slug)}
+                              onClick={() => {
+                                if (cat.slug !== categorySlug) resetCertificate();
+                                setCategorySlug(cat.slug);
+                              }}
                               aria-pressed={selected}
                               className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
                                 selected
@@ -805,6 +835,22 @@ function PostAdForm() {
             )}
 
             {/* Step 2: Photos */}
+            {step === 2 && !isJobPost && certificate && (
+              <div className="mb-6">
+                <CertificateUpload
+                  requirement={certificate}
+                  file={certificateFile}
+                  onFileChange={setCertificateFile}
+                  number={certificateNumber}
+                  onNumberChange={setCertificateNumber}
+                  inputClassName={inputClass}
+                />
+                <p className="mt-6 text-sm font-semibold text-ink">
+                  Shop photos <span className="font-normal text-ink-muted">(optional)</span>
+                </p>
+              </div>
+            )}
+
             {step === 2 && !isJobPost && (
               <div>
                 <input
@@ -1009,6 +1055,7 @@ function PostAdForm() {
                           ['Shop name', shopName.trim() || '—'],
                           ['Title', title],
                           ['Photos', `${photos.length} uploaded`],
+                          ...(certificate ? [[certificate.title, certificateFile ? 'Uploaded' : 'Missing — go back to Photos']] : []),
                         ]),
                     ['Location', `${city}${pincode ? `, ${pincode}` : ''}`],
                   ].map(([k, v]) => (

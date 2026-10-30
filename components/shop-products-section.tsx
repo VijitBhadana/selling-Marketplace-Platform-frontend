@@ -33,6 +33,8 @@ import {
   type PropertyFormValues,
 } from '@/lib/property-details';
 import { fileToResizedDataUrl, withImageParams } from '@/lib/image-utils';
+import { DOCTOR_CERTIFICATE, certificateToDataUrl } from '@/lib/shop-certificate';
+import { CertificateUpload } from '@/components/certificate-upload';
 import { BookingDetailsModal } from '@/components/booking-details';
 import { PropertyDetailsModal, PropertyFieldsEditor } from '@/components/property-details';
 import {
@@ -832,6 +834,10 @@ function ProductModal({
   );
   const [clinicValues, setClinicValues] = useState<ClinicFormValues>(() => toClinicFormValues(product?.clinicDetails, categorySlug));
   const clinicItem = isClinic && clinicType !== 'OTHER' ? clinicType : null;
+  // A doctor can't be added without their registration certificate (doctors already listed keep theirs).
+  const needsDoctorCertificate = clinicItem === 'DOCTOR' && clinicItemType(product?.clinicDetails) !== 'DOCTOR';
+  const [doctorCertificateFile, setDoctorCertificateFile] = useState<File | null>(null);
+  const [doctorCertificateNumber, setDoctorCertificateNumber] = useState('');
   // Education Cloude: a course, class, counselling service, book, or anything else (a plain product).
   const isEducation = isEducationCloude(cloudeSlug);
   const [educationType, setEducationType] = useState<EducationFormType>(() =>
@@ -886,7 +892,7 @@ function ProductModal({
   const [error, setError] = useState<string | null>(null);
 
   const listingFor = propertyType ? propertyFormListingFor(propertyType, propertyValues) : null;
-  const missingDetails = propertyType
+  const missingDetailFields = propertyType
     ? missingPropertyFields(propertyType, propertyValues)
     : clinicItem
       ? missingClinicFields(clinicItem, clinicValues)
@@ -897,6 +903,8 @@ function ProductModal({
       : isTransport
         ? missingTransportFields(transportValues)
         : [];
+  const missingDetails =
+    needsDoctorCertificate && !doctorCertificateFile ? [...missingDetailFields, "Doctor's certificate"] : missingDetailFields;
   // A loan scheme and an investment plan carry no single price — their terms hold the numbers.
   const hasPriceBox = !isTransport && (!isFinance || financeHasPrice(financeType));
   const canSubmit =
@@ -925,6 +933,7 @@ function ProductModal({
     setError(null);
     try {
       const imageUrl = imageFile ? await fileToResizedDataUrl(imageFile).catch(() => undefined) : undefined;
+      const certificateImage = needsDoctorCertificate && doctorCertificateFile ? await certificateToDataUrl(doctorCertificateFile) : null;
       const body = {
         name: name.trim(),
         description: description.trim() || undefined,
@@ -959,6 +968,9 @@ function ProductModal({
             ? { priceUnit }
             : {}),
         ...(imageUrl ? { imageUrl } : {}),
+        ...(certificateImage
+          ? { certificate: { image: certificateImage, number: doctorCertificateNumber.trim() || undefined } }
+          : {}),
       };
       const saved = isEditing ? await api.products.update(product!.id, body, token) : await api.products.create(listingId, body, token);
       onSaved(saved);
@@ -1121,6 +1133,17 @@ function ProductModal({
           </div>
 
           {clinicItem && <ClinicFieldsEditor type={clinicItem} values={clinicValues} onChange={setClinicValues} />}
+
+          {needsDoctorCertificate && (
+            <CertificateUpload
+              requirement={DOCTOR_CERTIFICATE}
+              file={doctorCertificateFile}
+              onFileChange={setDoctorCertificateFile}
+              number={doctorCertificateNumber}
+              onNumberChange={setDoctorCertificateNumber}
+              inputClassName={inputClass}
+            />
+          )}
 
           {educationItem && <EducationFieldsEditor type={educationItem} values={educationValues} onChange={setEducationValues} />}
 

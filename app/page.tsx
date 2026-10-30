@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { ShieldCheck, MapPin, Zap, ArrowRight, Check, Rocket } from 'lucide-react';
 import { cloudes } from '@/lib/cloudes-data';
+import { getCatalogue } from '@/lib/cloudes-catalogue';
 import { api, type FreshItem } from '@/lib/api';
 import { CloudeCard } from '@/components/cloude-card';
 import { LiveShopCard } from '@/components/live-shop-card';
@@ -121,18 +122,19 @@ function FreshListingsSkeleton() {
   );
 }
 
-// Serializable once at module load instead of on every request.
-const cloudeLinks = cloudes.map((c) => ({
-  slug: c.slug,
-  name: c.name,
-  icon: c.icon,
-  description: c.description,
-  categoryCount: c.categories.length,
-}));
-
-export default function HomePage() {
+export default async function HomePage() {
   const location = getUserLocation();
   const city = location?.city;
+  // Built-in Cloudes plus the admin's changes (Admin panel → Cloudes).
+  const liveCloudes = await getCatalogue();
+  const liveCategoryCount = liveCloudes.reduce((sum, c) => sum + c.categories.length, 0);
+  const cloudeLinks = liveCloudes.map((c) => ({
+    slug: c.slug,
+    name: c.name,
+    icon: c.icon,
+    description: c.description,
+    categoryCount: c.categories.length,
+  }));
 
   return (
     <div>
@@ -212,11 +214,11 @@ export default function HomePage() {
               style={{ animationDelay: '800ms' }}
             >
               <div className="text-center">
-                <p className="font-hero text-2xl font-extrabold text-ink">{cloudes.length}</p>
+                <p className="font-hero text-2xl font-extrabold text-ink">{liveCloudes.length}</p>
                 <p className="text-xs text-ink-muted">Cloudes</p>
               </div>
               <div className="text-center">
-                <p className="font-hero text-2xl font-extrabold text-ink">{totalCategories}+</p>
+                <p className="font-hero text-2xl font-extrabold text-ink">{liveCategoryCount}+</p>
                 <p className="text-xs text-ink-muted">Categories</p>
               </div>
               <div className="text-center">
@@ -237,18 +239,18 @@ export default function HomePage() {
                 Organised hyperlocal sectors
               </p>
               <h2 className="mt-1 font-hero text-2xl font-extrabold text-ink sm:text-3xl dark:text-white">
-                Explore {cloudes.length} Cloudes
+                Explore {liveCloudes.length} Cloudes
               </h2>
               <p className="mt-1 text-xs text-ink-muted sm:text-sm dark:text-slate-400">
                 Every local trade and business with its own dedicated space.
               </p>
             </div>
             <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold text-cyan-700 dark:border-cyan-400/40 dark:bg-cyan-400/10 dark:text-cyan-300">
-              {totalCategories}+ Sub-Categories
+              {liveCategoryCount}+ Sub-Categories
             </span>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-            {cloudes.map((c) => (
+            {liveCloudes.map((c) => (
               <CloudeCard key={c.slug} cloude={c} />
             ))}
           </div>

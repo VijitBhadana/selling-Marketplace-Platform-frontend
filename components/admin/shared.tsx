@@ -47,6 +47,8 @@ export type AdminUserDetail = AdminUser & {
     createdAt: string;
     cloude: { name: string };
     category: { name: string };
+    // Food / Clinic & Doctors / Sports & Fitness shops: the shop's licence, and each doctor's own (product set).
+    certificates?: { id: string; title: string; number: string | null; image: string; product: { name: string } | null }[];
   }[];
   jobsPosted: {
     id: string;

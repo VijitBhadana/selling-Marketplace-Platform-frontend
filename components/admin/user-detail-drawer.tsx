@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Ban, Bike, Briefcase, CreditCard, ExternalLink, RotateCcw, Store, X } from 'lucide-react';
+import { Ban, Bike, Briefcase, CreditCard, ExternalLink, FileBadge, RotateCcw, Store, X } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { vehicleLabel } from '@/lib/delivery';
 import { useAuth } from '@/lib/auth-context';
@@ -240,6 +240,32 @@ export function UserDetailDrawer({
                               </span>
                               <ExternalLink size={14} className="shrink-0 text-ink-muted" />
                             </Link>
+                            {!!l.certificates?.length && (
+                              <div className="mt-2 grid grid-cols-2 gap-2 pl-3">
+                                {l.certificates.map((c) => {
+                                  const label = c.product ? `${c.product.name} — ${c.title}` : c.title;
+                                  return (
+                                    <a
+                                      key={c.id}
+                                      href={c.image}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      download={`${l.shopName || l.title} - ${label}.jpg`}
+                                      className="group block overflow-hidden rounded-xl border border-border transition-colors hover:border-brand"
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={c.image} alt={label} className="aspect-[4/3] w-full bg-bg object-cover" />
+                                      <span className="block px-3 py-2 text-xs">
+                                        <span className="flex items-center gap-1 font-semibold text-ink group-hover:text-brand">
+                                          <FileBadge size={12} className="shrink-0" /> <span className="truncate">{label}</span>
+                                        </span>
+                                        {c.number && <span className="block truncate text-ink-muted">No. {c.number}</span>}
+                                      </span>
+                                    </a>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </li>
                         ))}
                       </ul>

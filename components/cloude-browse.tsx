@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import Link from 'next/link';
 import { LayoutGrid, Search, SlidersHorizontal, X } from 'lucide-react';
-import { getCloudeBySlug } from '@/lib/cloudes-data';
+import { getCloudeBySlug, type Cloude } from '@/lib/cloudes-data';
 import { categoryTone } from './category-tones';
 import { Icon } from './icon';
 
@@ -53,10 +53,10 @@ export function useCloudeQuery() {
   return useContext(BrowseContext).query.trim().toLowerCase();
 }
 
-export function CloudeSearchBar({ cloudeSlug }: { cloudeSlug: string }) {
+export function CloudeSearchBar({ cloudeSlug, categoryCount }: { cloudeSlug: string; categoryCount?: number }) {
   const { query, setQuery, expanded, setExpanded } = useCloudeBrowse();
   const inputRef = useRef<HTMLInputElement>(null);
-  const canExpand = (getCloudeBySlug(cloudeSlug)?.categories.length ?? 0) > PREVIEW_COUNT;
+  const canExpand = (categoryCount ?? getCloudeBySlug(cloudeSlug)?.categories.length ?? 0) > PREVIEW_COUNT;
 
   return (
     <form
@@ -126,10 +126,15 @@ const chipIdle =
 
 export function CloudeCategoryPanel({
   cloudeSlug,
+  categories: liveCategories,
+  groups: liveGroups,
   activeSlug,
   allLabel,
 }: {
   cloudeSlug: string;
+  /** The live (admin-managed) list; defaults to the built-in catalogue's. */
+  categories?: Cloude['categories'];
+  groups?: Cloude['groups'];
   activeSlug?: string;
   allLabel: string;
 }) {
@@ -138,12 +143,12 @@ export function CloudeCategoryPanel({
 
   // Each category borrows its group's icon; loose ones ("Other …") get a generic one.
   const categories = useMemo(() => {
-    const cloude = getCloudeBySlug(cloudeSlug);
+    const cloude = liveCategories ? { categories: liveCategories, groups: liveGroups } : getCloudeBySlug(cloudeSlug);
     return (cloude?.categories ?? []).map((cat) => {
       const group = cloude?.groups?.find((g) => g.items.some((it) => it.slug === cat.slug));
       return { ...cat, icon: group?.icon ?? 'Layers', tone: categoryTone(cloudeSlug, cat.slug).text };
     });
-  }, [cloudeSlug]);
+  }, [cloudeSlug, liveCategories, liveGroups]);
 
   const shown = query ? categories.filter((c) => c.name.toLowerCase().includes(query)) : categories;
   const canExpand = !query && categories.length > PREVIEW_COUNT;

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { cloudes } from '@/lib/cloudes-data';
+import { getCatalogue } from '@/lib/cloudes-catalogue';
 import { categoryKey, getSitemapEntries } from '@/lib/sitemap-data';
 import { absoluteUrl } from '@/lib/site';
 
@@ -24,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Real shops and jobs from the backend. If the API is unreachable (e.g. during the
   // build) the sitemap still ships the static pages and retries on revalidate.
-  const { listings, jobs, filledCategories } = await getSitemapEntries();
+  const [{ listings, jobs, filledCategories }, cloudes] = await Promise.all([getSitemapEntries(), getCatalogue()]);
 
   const cloudeRoutes = cloudes.flatMap((c): Entry[] => [
     { url: absoluteUrl(`/cloudes/${c.slug}`), lastModified: now, changeFrequency: 'daily', priority: 0.9 },

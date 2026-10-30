@@ -8,6 +8,7 @@ import {
   ArrowUpRight,
   CreditCard,
   ExternalLink,
+  Layers,
   LayoutDashboard,
   LogOut,
   Megaphone,
@@ -36,6 +37,7 @@ const SubscriptionsSection = dynamic(
   { loading: tabLoading },
 );
 const ThemeSection = dynamic(() => import('@/components/admin/theme-section').then((m) => m.ThemeSection), { loading: tabLoading });
+const CloudesSection = dynamic(() => import('@/components/admin/cloudes-section').then((m) => m.CloudesSection), { loading: tabLoading });
 const UserDetailDrawer = dynamic(() => import('@/components/admin/user-detail-drawer').then((m) => m.UserDetailDrawer));
 const AnnouncementDialog = dynamic(() => import('@/components/admin/announcement-dialog').then((m) => m.AnnouncementDialog));
 const AdvertisementDialog = dynamic(() => import('@/components/admin/advertisement-dialog').then((m) => m.AdvertisementDialog));
@@ -44,6 +46,7 @@ const TABS = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'users', label: 'Users', icon: Users },
   { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+  { id: 'cloudes', label: 'Cloudes', icon: Layers },
   { id: 'theme', label: 'Theme Settings', icon: Palette },
 ] as const;
 
@@ -55,6 +58,7 @@ const QUICK_ACTIONS = [
   { id: 'remove-ad', label: 'Remove advertisement', icon: Trash2 },
   { id: 'users', label: 'Manage users', icon: Users },
   { id: 'subscriptions', label: 'Review subscriptions', icon: CreditCard },
+  { id: 'cloudes', label: 'Manage Cloudes', icon: Layers },
   { id: 'theme', label: 'Change brand colour', icon: Palette },
 ] as const;
 
@@ -357,6 +361,7 @@ function AdminPanel() {
             <UsersSection key={userQuery} initialQuery={userQuery} refreshKey={refreshKey} onOpenUser={setOpenUserId} />
           )}
           {tab === 'subscriptions' && <SubscriptionsSection onOpenUser={setOpenUserId} />}
+          {tab === 'cloudes' && <CloudesSection />}
           {tab === 'theme' && <ThemeSection />}
         </main>
       </div>
