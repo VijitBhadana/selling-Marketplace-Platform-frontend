@@ -1,5 +1,6 @@
+import Image from 'next/image';
 import Link from 'next/link';
-import { Cloud, ArrowUp, ArrowRight } from 'lucide-react';
+import { ArrowUp, ArrowRight } from 'lucide-react';
 import { cloudes } from '@/lib/cloudes-data';
 import { LEGAL_LINKS } from '@/lib/legal';
 import { Icon } from './icon';
@@ -44,11 +45,10 @@ export function Footer() {
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4 lg:grid-cols-12">
           {/* Brand */}
           <div className="col-span-2 sm:col-span-4 lg:col-span-3">
-            <div className="mb-3 flex items-center gap-2 font-display text-lg font-bold text-ink">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand/70 text-brand-ink shadow-[0_4px_14px_-4px_rgb(var(--brand)/calc(0.6*var(--glow)))]">
-                <Cloud size={17} strokeWidth={2.4} />
-              </span>
-              DukanCloude
+            <div className="mb-3 flex items-center gap-2.5">
+              <Image src="/dukancloude-logo-icon.png" alt="" width={40} height={40} className="h-9 w-9 shrink-0" />
+              <Image src="/dukancloude-logo-wordmark.png" alt="DukanCloude" width={153} height={18} className="h-[18px] w-auto dark:hidden" />
+              <Image src="/dukancloude-logo-wordmark-dark.png" alt="DukanCloude" width={153} height={18} className="hidden h-[18px] w-auto dark:block" />
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-ink-muted">
               One platform, every kind of business — products, services, jobs and bookings across 13 Cloudes.

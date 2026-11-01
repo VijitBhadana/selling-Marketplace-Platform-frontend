@@ -390,6 +390,7 @@ export const api = {
     user: (id: string, token: string) => apiFetch(`/admin/users/${id}`, { token }),
     setSuspended: (id: string, suspended: boolean, token: string) =>
       apiFetch(`/admin/users/${id}/suspension`, { method: 'PATCH', body: { suspended }, token }),
+    deleteUser: (id: string, token: string) => apiFetch<void>(`/admin/users/${id}`, { method: 'DELETE', token }),
     subscriptions: (params: { status?: string; q?: string }, token: string) => {
       const qs = new URLSearchParams(
         Object.entries(params).filter(([, v]) => v) as [string, string][],

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Ban, Bike, Briefcase, CreditCard, ExternalLink, FileBadge, RotateCcw, Store, X } from 'lucide-react';
+import { Ban, Bike, Briefcase, CreditCard, ExternalLink, FileBadge, RotateCcw, Store, Trash2, X } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { vehicleLabel } from '@/lib/delivery';
 import { useAuth } from '@/lib/auth-context';
@@ -18,6 +18,7 @@ import {
   formatAmount,
   formatDate,
 } from './shared';
+import { DeleteUserDialog } from './delete-user-dialog';
 import { SuspendDialog } from './suspend-dialog';
 
 function Detail({ label, value }: { label: string; value: React.ReactNode }) {
@@ -54,6 +55,7 @@ export function UserDetailDrawer({
   const [user, setUser] = useState<AdminUserDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
@@ -61,6 +63,7 @@ export function UserDetailDrawer({
     setUser(null);
     setError(null);
     setConfirming(false);
+    setDeleting(false);
     if (!userId || !token) return;
     let cancelled = false;
     api.admin
@@ -89,6 +92,11 @@ export function UserDetailDrawer({
     setConfirming(false);
     setUser((u) => u && { ...u, ...updated });
     onChanged();
+  }
+
+  function onDeleteDone() {
+    onChanged();
+    onClose();
   }
 
   const isSeller = user?.role === 'SELLER';
@@ -306,22 +314,31 @@ export function UserDetailDrawer({
         </div>
 
         {user && (
-          <div className="border-t border-border px-5 py-4">
+          <div className="flex gap-2 border-t border-border px-5 py-4">
             <button
               type="button"
               onClick={() => setConfirming(true)}
-              className={`flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white transition-colors ${
+              className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white transition-colors ${
                 user.isSuspended ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'
               }`}
             >
               {user.isSuspended ? <RotateCcw size={16} /> : <Ban size={16} />}
               {user.isSuspended ? 'Reactivate account' : 'Suspend account'}
             </button>
+            <button
+              type="button"
+              onClick={() => setDeleting(true)}
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-red-500/30 text-sm font-semibold text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
+            >
+              <Trash2 size={16} />
+              Delete user
+            </button>
           </div>
         )}
       </aside>
 
       <SuspendDialog user={confirming ? user : null} onClose={() => setConfirming(false)} onDone={onSuspendDone} />
+      <DeleteUserDialog user={deleting ? user : null} onClose={() => setDeleting(false)} onDone={onDeleteDone} />
     </div>
   );
 }

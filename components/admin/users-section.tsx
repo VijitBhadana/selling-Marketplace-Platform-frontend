@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Ban, ChevronLeft, ChevronRight, RotateCcw, Search, Users } from 'lucide-react';
+import { Ban, ChevronLeft, ChevronRight, RotateCcw, Search, Trash2, Users } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -18,6 +18,7 @@ import {
   formatDate,
   inputClass,
 } from './shared';
+import { DeleteUserDialog } from './delete-user-dialog';
 import { SuspendDialog } from './suspend-dialog';
 
 type RoleFilter = 'ALL' | 'BUYER' | 'SELLER';
@@ -44,6 +45,7 @@ export function UsersSection({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [target, setTarget] = useState<AdminUser | null>(null);
+  const [deleting, setDeleting] = useState<AdminUser | null>(null);
 
   // A new search or filter goes back to page 1 in the same update — resetting it in a
   // separate effect fetched the old page first and then page 1 (two requests, and the
@@ -83,6 +85,11 @@ export function UsersSection({
         },
         token,
       );
+      // Deleting the last user on the last page leaves that page empty.
+      if (res.users.length === 0 && page > 1) {
+        setPage((p) => p - 1);
+        return;
+      }
       setData({ total: res.total, users: res.users });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not load users.');
@@ -98,6 +105,11 @@ export function UsersSection({
   function onSuspendDone(updated: AdminUser) {
     setTarget(null);
     setData((d) => d && { ...d, users: d.users.map((u) => (u.id === updated.id ? updated : u)) });
+  }
+
+  function onDeleteDone() {
+    setDeleting(null);
+    load();
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
@@ -117,6 +129,24 @@ export function UsersSection({
     >
       {u.isSuspended ? <RotateCcw size={13} /> : <Ban size={13} />}
       {u.isSuspended ? 'Reactivate' : 'Suspend'}
+    </button>
+  );
+
+  const deleteButton = (u: AdminUser, compact = false) => (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setDeleting(u);
+      }}
+      aria-label={`Delete ${u.name}`}
+      title="Delete user"
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 px-2.5 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400 ${
+        compact ? 'flex-1' : ''
+      }`}
+    >
+      <Trash2 size={13} />
+      {compact && 'Delete'}
     </button>
   );
 
@@ -208,7 +238,12 @@ export function UsersSection({
                       <td className="whitespace-nowrap px-4 py-3">
                         <StatusBadge user={u} />
                       </td>
-                      <td className="px-4 py-3 text-right">{suspendButton(u)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          {suspendButton(u)}
+                          {deleteButton(u)}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -245,6 +280,7 @@ export function UsersSection({
                       View details
                     </button>
                     {suspendButton(u, true)}
+                    {deleteButton(u, true)}
                   </div>
                 </li>
               ))}
@@ -282,6 +318,7 @@ export function UsersSection({
       </div>
 
       <SuspendDialog user={target} onClose={() => setTarget(null)} onDone={onSuspendDone} />
+      <DeleteUserDialog user={deleting} onClose={() => setDeleting(null)} onDone={onDeleteDone} />
     </div>
   );
 }
