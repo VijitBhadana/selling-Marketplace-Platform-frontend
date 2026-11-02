@@ -13,11 +13,14 @@ export default function AboutPage() {
     <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6">
       <h1 className="font-display text-3xl font-bold text-ink">About DukanCloude</h1>
       <p className="mt-4 text-ink-muted">
-        DukanCloude is a multi-category marketplace, similar in concept to OLX, but built around the idea
-        of "Cloudes" — sector-based groupings that bring both products and services onto a single
-        platform. A buyer can purchase a product directly, or discover and contact a relevant service
-        provider, across {cloudes.length} Cloudes covering everything from handmade crafts to
-        healthcare discovery.
+        DukanCloude is a multi-category marketplace built around the idea of "Cloudes" — sector-based
+        groupings that bring both products and services onto a single platform. A buyer can purchase a
+        product directly, or discover and contact a relevant service provider, across {cloudes.length} Cloudes
+        covering everything from handmade crafts to healthcare discovery.
+      </p>
+      <p className="mt-4 text-ink-muted">
+        We provide a platform where sellers and buyers connect easily, orders are delivered and services
+        are provided, and our platform also creates employment for delivery partners.
       </p>
       <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {cloudes.map((c) => (

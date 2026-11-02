@@ -43,7 +43,6 @@ export const SITE_KEYWORDS = [
   'jobs near me',
   'wedding venues',
   'property for rent',
-  'OLX alternative',
 ];
 
 export function absoluteUrl(path = '/') {

@@ -46,7 +46,7 @@ import {
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { fileToResizedDataUrl, withImageParams } from '@/lib/image-utils';
-import { locationErrorMessage } from '@/lib/user-location';
+import { cleanPincode, locationErrorMessage, preciseCoords, reverseGeocode } from '@/lib/user-location';
 import { certificateToDataUrl, shopCertificateFor } from '@/lib/shop-certificate';
 import { CertificateUpload } from '@/components/certificate-upload';
 import { Skeleton, SkeletonGroup } from '@/components/skeleton';
@@ -142,17 +142,12 @@ function PostAdForm() {
     setLocationError(null);
     setLocating(true);
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
+    preciseCoords().then(
+      async ({ latitude, longitude }) => {
         try {
-          const { latitude, longitude } = position.coords;
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
-          );
-          const data = await res.json();
-          const addr = data?.address ?? {};
+          const addr = await reverseGeocode(latitude, longitude);
           const detectedCity: string = addr.city || addr.town || addr.municipality || addr.village || addr.suburb || addr.county || '';
-          const detectedPincode: string = addr.postcode || '';
+          const detectedPincode: string = cleanPincode(addr.postcode) ?? '';
 
           if (detectedCity) setCity(detectedCity);
           if (detectedPincode) setPincode(detectedPincode);
@@ -168,7 +163,6 @@ function PostAdForm() {
         setLocating(false);
         setLocationError(locationErrorMessage(err, 'enter your city manually'));
       },
-      { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 

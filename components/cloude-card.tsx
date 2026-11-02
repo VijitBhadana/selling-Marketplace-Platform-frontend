@@ -28,7 +28,7 @@ export type CardStyle = {
   /** Icon tile: background, border and glyph colour. */
   tile: string;
   badge?: { label: string; className: string };
-  /** Unsplash cover photo (no query string) shown on the home-page card. */
+  /** Cover shown on the home-page card: Unsplash photo (no query string) or a local /public path. */
   image: string;
   /** Two short chips under the blurb. */
   tags: [string, string];
@@ -84,7 +84,8 @@ export const cardStyles: Record<string, CardStyle> = {
     blurb: 'Travel taxis, tempo travellers, bus tickets & driver hire.',
     icon: CalendarCheck,
     tile: 'bg-sky-50 border-sky-200 text-sky-600 dark:bg-sky-500/15 dark:border-sky-400/40 dark:text-sky-300',
-    image: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957',
+    // Collage of the Cloude's categories: tours, hotels, cabs, buses, movers & parcels, party events.
+    image: '/booking-cloude-cover.jpg',
     tags: ['Taxis', 'Bus tickets'],
   },
   wedding: {
@@ -148,7 +149,8 @@ export const cardStyles: Record<string, CardStyle> = {
     blurb: 'Gym memberships, badminton, yoga trainers & sports gear.',
     icon: Dumbbell,
     tile: 'bg-cyan-50 border-cyan-200 text-cyan-600 dark:bg-cyan-600/15 dark:border-cyan-500/40 dark:text-cyan-300',
-    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48',
+    // Collage of the Cloude's categories: cricket, badminton, physical training, yoga, gym trainer, karate.
+    image: '/sports-cloude-cover.jpg',
     tags: ['Gym', 'Yoga'],
   },
 };
@@ -164,6 +166,7 @@ export function CloudeCard({ cloude }: { cloude: Cloude }) {
   const title = style?.title ?? cloude.name.replace(' Cloude', '');
   const blurb = style?.blurb ?? cloude.description;
   const IconGlyph = style?.icon;
+  const image = style?.image ?? FALLBACK_IMAGE;
 
   return (
     <Link
@@ -172,7 +175,7 @@ export function CloudeCard({ cloude }: { cloude: Cloude }) {
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-brand-soft">
         <Image
-          src={`${style?.image ?? FALLBACK_IMAGE}?w=900&q=80&auto=format&fit=crop`}
+          src={image.startsWith('/') ? image : `${image}?w=900&q=80&auto=format&fit=crop`}
           alt={title}
           fill
           sizes="(min-width: 1280px) 300px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"

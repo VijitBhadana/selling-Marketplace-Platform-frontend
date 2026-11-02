@@ -9,6 +9,7 @@ export const LOCATION_COOKIE = 'dc_loc';
 export const LEGACY_CITY_COOKIE = 'dc_city';
 export const LOCATION_CHANGE_EVENT = 'dc-location-change';
 const PROMPTED_KEY = 'dc_location_prompted';
+const CLEARED_KEY = 'dc_location_cleared';
 
 function safeDecode(v: string) {
   try {
@@ -66,7 +67,22 @@ export function saveLocation(loc: UserLocation | null) {
     ? `${LOCATION_COOKIE}=${encodeURIComponent(JSON.stringify(loc))}; path=/; max-age=${year}; SameSite=Lax`
     : `${LOCATION_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
   document.cookie = `${LEGACY_CITY_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+  try {
+    if (loc) localStorage.removeItem(CLEARED_KEY);
+    else localStorage.setItem(CLEARED_KEY, '1');
+  } catch {
+    // storage blocked — only means a cleared location may get detected again
+  }
   window.dispatchEvent(new CustomEvent(LOCATION_CHANGE_EVENT, { detail: loc }));
+}
+
+/** True when the visitor chose "all cities", which automatic detection must respect. */
+export function locationWasCleared() {
+  try {
+    return localStorage.getItem(CLEARED_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 
 /** Straight-line km from the visitor to a shop, or undefined when either has no coordinates. */
@@ -100,6 +116,35 @@ export function shouldAutoPrompt() {
   }
 }
 
+/**
+ * Calls `onAllowed` whenever this site may read location without asking: right away if it
+ * already can, the moment access is granted (even from the site settings), and on coming
+ * back to the tab — there's no event for the phone's own Location switch being turned on.
+ * Browsers without the Permissions API simply never call it. Returns a stop function.
+ */
+export function watchLocationAccess(onAllowed: () => void) {
+  let status: PermissionStatus | undefined;
+  let stopped = false;
+  const check = () => {
+    if (status?.state === 'granted' && document.visibilityState === 'visible') onAllowed();
+  };
+  navigator.permissions
+    ?.query({ name: 'geolocation' })
+    .then((s) => {
+      if (stopped) return;
+      status = s;
+      s.addEventListener('change', check);
+      document.addEventListener('visibilitychange', check);
+      check();
+    })
+    .catch(() => {});
+  return () => {
+    stopped = true;
+    status?.removeEventListener('change', check);
+    document.removeEventListener('visibilitychange', check);
+  };
+}
+
 type NominatimAddress = Record<string, string | undefined>;
 
 function cityFrom(addr: NominatimAddress) {
@@ -126,37 +171,90 @@ export function locationErrorMessage(err: GeolocationPositionError, fallback = '
   return `Could not get your location — check your phone's Location is turned on, or ${fallback}.`;
 }
 
+// Accuracy (metres) that's good enough to stop listening straight away.
+const GOOD_FIX_METRES = 30;
+// How long to keep improving once a first reading is in.
+const SETTLE_MS = 6000;
+
 /**
- * Browser geolocation → city + pincode via OpenStreetMap's reverse geocoder (same lookup
- * the Post Ad form uses). Rejects with a message the picker can show as-is.
+ * The most accurate reading the device gives within a few seconds. The first fix is usually
+ * a rough Wi-Fi/cell one and GPS tightens it after that, so this listens rather than taking
+ * a single reading. The timers only start once a reading arrives (the browser's own timeout
+ * likewise waits for the permission prompt), so a slow "Allow" tap costs no accuracy. With
+ * no fresh fix at all (laptops, indoors) it falls back to a rough or recent position.
+ * Rejects with the GeolocationPositionError.
  */
-export function detectLocation(): Promise<UserLocation> {
+export function preciseCoords(): Promise<GeolocationCoordinates> {
   return new Promise((resolve, reject) => {
-    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
-      reject(new Error("Location isn't supported in this browser — type your city instead."));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=en&lat=${coords.latitude}&lon=${coords.longitude}`,
-          );
-          const addr: NominatimAddress = (await res.json())?.address ?? {};
-          const city = cityFrom(addr);
-          if (!city) {
-            reject(new Error('Could not work out your city — type it instead.'));
-            return;
-          }
-          resolve({ city, pincode: addr.postcode || undefined, lat: round(coords.latitude), lng: round(coords.longitude) });
-        } catch {
-          reject(new Error('Could not detect your location — type your city instead.'));
-        }
+    const geo = navigator.geolocation;
+    let best: GeolocationCoordinates | undefined;
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    let done = false;
+
+    const finish = (err?: GeolocationPositionError) => {
+      if (done) return;
+      done = true;
+      clearTimeout(settle);
+      geo.clearWatch(watchId);
+      if (best) resolve(best);
+      else if (err?.code === err?.PERMISSION_DENIED) reject(err);
+      else {
+        geo.getCurrentPosition(({ coords }) => resolve(coords), reject, {
+          enableHighAccuracy: false,
+          timeout: 5000,
+          maximumAge: 10 * 60 * 1000,
+        });
+      }
+    };
+
+    const watchId = geo.watchPosition(
+      ({ coords }) => {
+        if (!best || coords.accuracy < best.accuracy) best = coords;
+        if (best.accuracy <= GOOD_FIX_METRES) finish();
+        else settle ??= setTimeout(finish, SETTLE_MS);
       },
-      (err) => reject(new Error(locationErrorMessage(err))),
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60 * 1000 },
+      finish,
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   });
+}
+
+/** Nominatim sometimes returns "110001;110002" or "110 001" — keeps the first clean 6-digit pincode. */
+export function cleanPincode(postcode: string | undefined) {
+  return postcode
+    ?.replace(/\s/g, '')
+    .split(/[;,]/)
+    .find((p) => /^\d{6}$/.test(p));
+}
+
+/** Coordinates → address parts, via OpenStreetMap's reverse geocoder. */
+export async function reverseGeocode(lat: number, lng: number): Promise<NominatimAddress> {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=en&lat=${lat}&lon=${lng}`,
+  );
+  return (await res.json())?.address ?? {};
+}
+
+/** Browser geolocation → city + pincode. Rejects with a message the picker can show as-is. */
+export async function detectLocation(): Promise<UserLocation> {
+  if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+    throw new Error("Location isn't supported in this browser — type your city instead.");
+  }
+  let coords: GeolocationCoordinates;
+  try {
+    coords = await preciseCoords();
+  } catch (err) {
+    throw new Error(locationErrorMessage(err as GeolocationPositionError));
+  }
+  let addr: NominatimAddress;
+  try {
+    addr = await reverseGeocode(coords.latitude, coords.longitude);
+  } catch {
+    throw new Error('Could not detect your location — type your city instead.');
+  }
+  const city = cityFrom(addr);
+  if (!city) throw new Error('Could not work out your city — type it instead.');
+  return { city, pincode: cleanPincode(addr.postcode), lat: round(coords.latitude), lng: round(coords.longitude) };
 }
 
 /**

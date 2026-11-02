@@ -7,19 +7,22 @@ import {
   LOCATION_CHANGE_EVENT,
   detectLocation,
   locateTypedCity,
+  locationWasCleared,
   readLocation,
   saveLocation,
   shouldAutoPrompt,
+  watchLocationAccess,
   type UserLocation,
 } from '@/lib/user-location';
 
 // Both the desktop and mobile pickers mount at once; only one may ask for permission.
-let autoDetectStarted = false;
+let autoDetecting = false;
 
 /**
  * Location button in the navbar search. Shows the visitor's city; clicking it lets them
  * detect it again, type another one, or go back to all cities. On a first visit it asks
- * for location once by itself, so shops near the visitor show up straight away.
+ * for location once by itself, so shops near the visitor show up straight away. Whenever
+ * location access is on and no location is set, it fills one in without being asked.
  */
 export const LocationPicker = memo(function LocationPicker({ variant }: { variant: 'desktop' | 'mobile' | 'header' }) {
   const router = useRouter();
@@ -54,11 +57,23 @@ export const LocationPicker = memo(function LocationPicker({ variant }: { varian
     const onChange = (e: Event) => setCity((e as CustomEvent<UserLocation | null>).detail?.city ?? null);
     window.addEventListener(LOCATION_CHANGE_EVENT, onChange);
 
-    if (variant === 'desktop' && !autoDetectStarted && !readLocation() && shouldAutoPrompt()) {
-      autoDetectStarted = true;
-      detect(true);
+    // Never over a location the visitor chose, nor after they cleared it for "all cities".
+    const autoDetect = () => {
+      if (autoDetecting || readLocation() || locationWasCleared()) return;
+      autoDetecting = true;
+      detect(true).finally(() => {
+        autoDetecting = false;
+      });
+    };
+    let stopWatching: (() => void) | undefined;
+    if (variant === 'desktop') {
+      if (!readLocation() && shouldAutoPrompt()) autoDetect();
+      stopWatching = watchLocationAccess(autoDetect);
     }
-    return () => window.removeEventListener(LOCATION_CHANGE_EVENT, onChange);
+    return () => {
+      window.removeEventListener(LOCATION_CHANGE_EVENT, onChange);
+      stopWatching?.();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

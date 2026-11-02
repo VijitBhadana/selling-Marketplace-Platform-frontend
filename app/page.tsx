@@ -22,16 +22,16 @@ export const metadata: Metadata = { alternates: { canonical: '/' } };
 
 const totalCategories = cloudes.reduce((sum, c) => sum + c.categories.length, 0);
 
-const comparisonRows: { label: string; dukancloude: string; olx: string; facebook: string; highlight?: boolean }[] = [
-  { label: 'Time to post an ad', dukancloude: '2 Minutes', olx: '5–10 mins', facebook: '5–10 mins' },
-  { label: 'Cost to post', dukancloude: 'Free', olx: 'Free', facebook: 'Free', highlight: true },
-  { label: 'Seller verification', dukancloude: 'OTP-Verified', olx: 'Basic', facebook: 'None' },
-  { label: 'Products + services', dukancloude: 'Yes, one platform', olx: 'Products only', facebook: 'Products only' },
-  { label: 'Organised categories', dukancloude: `${cloudes.length} Cloudes, ${totalCategories}+ categories`, olx: 'Broad, less organised', facebook: 'Broad, less organised' },
-  { label: 'Location-based results', dukancloude: 'Yes', olx: 'Yes', facebook: 'Limited' },
-  { label: 'Spam control', dukancloude: 'OTP + moderation', olx: 'Basic', facebook: 'Basic' },
-  { label: 'Support', dukancloude: '100% human support', olx: 'Limited', facebook: 'Limited' },
-  { label: 'Overall rating', dukancloude: '★ 4.9', olx: '★ 4.0', facebook: '★ 3.8' },
+const comparisonRows: { label: string; dukancloude: string; other:string; facebook: string; highlight?: boolean }[] = [
+  { label: 'Time to post an ad', dukancloude: '2 Minutes', other:'5–10 mins', facebook: '5–10 mins' },
+  { label: 'Cost to post', dukancloude: 'Free', other:'Free', facebook: 'Free', highlight: true },
+  { label: 'Seller verification', dukancloude: 'OTP-Verified', other:'Basic', facebook: 'None' },
+  { label: 'Products + services', dukancloude: 'Yes, one platform', other:'Products only', facebook: 'Products only' },
+  { label: 'Organised categories', dukancloude: `${cloudes.length} Cloudes, ${totalCategories}+ categories`, other:'Broad, less organised', facebook: 'Broad, less organised' },
+  { label: 'Location-based results', dukancloude: 'Yes', other:'Yes', facebook: 'Limited' },
+  { label: 'Spam control', dukancloude: 'OTP + moderation', other:'Basic', facebook: 'Basic' },
+  { label: 'Support', dukancloude: '100% human support', other:'Limited', facebook: 'Limited' },
+  { label: 'Overall rating', dukancloude: '★ 4.9', other:'★ 4.0', facebook: '★ 3.8' },
 ];
 
 const differentiators = [
@@ -331,7 +331,7 @@ export default async function HomePage() {
                   <td className="px-5 py-4 font-medium text-ink">{row.label}</td>
                   <td className="px-5 py-4 font-semibold text-brand">{row.dukancloude}</td>
                   <td className="px-5 py-4 text-ink-muted">
-                    {row.olx === row.facebook ? row.olx : `${row.olx} / ${row.facebook}`}
+                    {row.other === row.facebook ? row.other : `${row.other} / ${row.facebook}`}
                   </td>
                 </tr>
               ))}
