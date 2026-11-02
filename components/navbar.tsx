@@ -505,28 +505,10 @@ export function Navbar() {
             </Link>
           )}
 
-          {/* Phones, signed in: the menu button doubles as the profile avatar (no room for both); the small badge keeps the menu cue. */}
-          {!loading && user && (
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
-              className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand/70 text-sm font-bold text-brand-ink transition-transform active:scale-95 sm:hidden"
-              aria-label="Toggle menu"
-              aria-expanded={open}
-            >
-              {user.name?.charAt(0).toUpperCase() ?? 'U'}
-              <span className="absolute -bottom-1 -right-1 flex h-[18px] w-[18px] items-center justify-center rounded-full border border-border bg-surface text-ink">
-                {open ? <X size={11} strokeWidth={2.75} /> : <Menu size={11} strokeWidth={2.75} />}
-              </span>
-            </button>
-          )}
-
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className={`h-9 w-9 items-center justify-center rounded-full border border-border bg-surface/70 text-ink transition-colors hover:bg-surface-hover md:hidden ${
-              !loading && user ? 'hidden sm:flex' : 'flex'
-            }`}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface/70 text-ink transition-colors hover:bg-surface-hover md:hidden"
             aria-label="Toggle menu"
             aria-expanded={open}
           >

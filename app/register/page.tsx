@@ -665,7 +665,7 @@ export default function RegisterPage() {
   const [role, setRole] = useState<Role>('BUYER');
   return (
     <AuthShell
-      panelTitle="Open your dukan on the cloud."
+      panelTitle="Open your dukan on the cloude."
       panelText="Join buyers and sellers discovering shops, services, jobs and bookings near them."
       panelExtra={
         role === 'SELLER' ? (
