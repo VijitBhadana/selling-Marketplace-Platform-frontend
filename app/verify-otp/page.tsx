@@ -1,9 +1,10 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertCircle, Cloud, MailCheck } from 'lucide-react';
+import { AlertCircle, MailCheck } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { AuthFormSkeleton } from '@/components/skeleton';
@@ -112,7 +113,7 @@ function VerifyOtpForm() {
         </div>
 
         <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-sm text-ink-muted">
-          <Cloud size={14} />
+          <Image src="/dukancloude-logo-icon.png" alt="" width={16} height={16} className="h-4 w-4" />
           <Link href="/login" className="font-semibold text-brand hover:underline">
             Back to log in
           </Link>

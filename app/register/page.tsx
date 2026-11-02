@@ -130,7 +130,9 @@ function PhotoField({
   );
 }
 
-const sellerKycReasons: { icon: LucideIcon; title: string; text: string }[] = [
+type KycReason = { icon: LucideIcon; title: string; text: string };
+
+const sellerKycReasons: KycReason[] = [
   {
     icon: Fingerprint,
     title: 'Aadhaar — proves you are a real person',
@@ -153,15 +155,45 @@ const sellerKycReasons: { icon: LucideIcon; title: string; text: string }[] = [
   },
 ];
 
-/** Left-panel note on the seller sign-up: why each KYC detail is asked for. */
-function SellerKycNote() {
+// Unlike sellers, partners upload an Aadhaar card photo (admin-only), so this must not
+// repeat the seller line about the full Aadhaar number never being stored.
+const deliveryKycReasons: KycReason[] = [
+  {
+    icon: Fingerprint,
+    title: 'Aadhaar number & photo — proves who you are',
+    text: 'Confirms you are a real person and stops fake or duplicate delivery accounts.',
+  },
+  {
+    icon: IdCard,
+    title: 'Driving licence — shows you are licensed',
+    text: 'Your licence number and photo confirm you are allowed to drive on the road.',
+  },
+  {
+    icon: Bike,
+    title: 'Vehicle details — help people spot you',
+    text: 'Your vehicle type and number help shops and buyers recognise you at pickup and drop-off.',
+  },
+  {
+    icon: MapPin,
+    title: 'Address, phone & email — stay in touch',
+    text: 'Your address is for our records. Shops and buyers call you on your phone during orders, and your OTP comes by email.',
+  },
+  {
+    icon: Lock,
+    title: 'Your documents stay private',
+    text: 'Aadhaar and licence photos are seen only by our admin team. Buyers and shops see just your name, phone, vehicle details and a masked licence number.',
+  },
+];
+
+/** Left-panel note on the seller / delivery sign-up: why each KYC detail is asked for. */
+function KycNote({ reasons, closing }: { reasons: KycReason[]; closing: string }) {
   return (
     <div className="animate-fade-in-up rounded-2xl border border-white/10 bg-white/[0.04] p-5">
       <p className="flex items-center gap-2 text-sm font-semibold">
         <ShieldCheck size={17} className="text-brand" /> Why we ask for these details
       </p>
       <ul className="mt-4 space-y-3.5">
-        {sellerKycReasons.map(({ icon: Icon, title, text }) => (
+        {reasons.map(({ icon: Icon, title, text }) => (
           <li key={title} className="flex gap-3">
             <Icon size={15} className="mt-0.5 shrink-0 text-brand" />
             <div>
@@ -171,10 +203,7 @@ function SellerKycNote() {
           </li>
         ))}
       </ul>
-      <p className="mt-4 border-t border-white/10 pt-3.5 text-xs leading-snug text-white/70">
-        Your details stay completely secure with {SITE_NAME}. We collect them only for security purposes, and they are never
-        shared or leaked outside.
-      </p>
+      <p className="mt-4 border-t border-white/10 pt-3.5 text-xs leading-snug text-white/70">{closing}</p>
     </div>
   );
 }
@@ -189,7 +218,7 @@ function KycError({ value, length, valid, message }: { value: string; length: nu
   );
 }
 
-// The role lives in RegisterPage so the brand panel can show the seller KYC note.
+// The role lives in RegisterPage so the brand panel can show the seller / delivery KYC note.
 function RegisterForm({ role, setRole }: { role: Role; setRole: (role: Role) => void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -638,7 +667,19 @@ export default function RegisterPage() {
     <AuthShell
       panelTitle="Open your dukan on the cloud."
       panelText="Join buyers and sellers discovering shops, services, jobs and bookings near them."
-      panelExtra={role === 'SELLER' ? <SellerKycNote /> : undefined}
+      panelExtra={
+        role === 'SELLER' ? (
+          <KycNote
+            reasons={sellerKycReasons}
+            closing={`Your details stay completely secure with ${SITE_NAME}. We collect them only for security purposes, and they are never shared or leaked outside.`}
+          />
+        ) : role === 'DELIVERY' ? (
+          <KycNote
+            reasons={deliveryKycReasons}
+            closing={`Your documents stay safely with ${SITE_NAME}. We use them only to verify you, and we never sell them or outsource them to any outside company.`}
+          />
+        ) : undefined
+      }
       title="Create your account"
       subtitle="Buy, sell, and book across every Cloude."
     >

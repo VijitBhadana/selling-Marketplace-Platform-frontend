@@ -1,9 +1,10 @@
 // Shared chrome for the login and register pages: a brand panel (lg+) beside
 // the form column, plus the field / button / alert pieces both forms use.
 // Purely presentational — each page keeps its own state and submit logic.
+import Image from 'next/image';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { AlertCircle, BadgeCheck, Cloud, LayoutGrid, Zap } from 'lucide-react';
+import { AlertCircle, BadgeCheck, LayoutGrid, Zap } from 'lucide-react';
 import { cloudes } from '@/lib/cloudes-data';
 import { SITE_NAME } from '@/lib/site';
 import { Skeleton, SkeletonGroup } from '@/components/skeleton';
@@ -55,10 +56,8 @@ export function AuthShell({
 
           <div className="relative">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-brand-ink shadow-lg shadow-brand/30">
-                <Cloud size={20} strokeWidth={2.2} />
-              </span>
-              <span className="font-display text-lg font-bold tracking-tight">{SITE_NAME}</span>
+              <Image src="/dukancloude-logo-icon.png" alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
+              <Image src="/dukancloude-logo-wordmark-dark.png" alt={SITE_NAME} width={153} height={18} className="h-[18px] w-auto" />
             </div>
             {panelExtra && <div className="mt-8">{panelExtra}</div>}
           </div>
@@ -97,9 +96,7 @@ export function AuthShell({
         <section className="flex flex-col justify-center px-6 py-10 sm:px-12 lg:px-14 lg:py-14">
           <div className="mx-auto w-full max-w-[400px]">
             <div className="mb-8">
-              <span className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-brand-ink shadow-lg shadow-brand/25 lg:hidden">
-                <Cloud size={22} strokeWidth={2.2} />
-              </span>
+              <Image src="/dukancloude-logo-icon.png" alt={SITE_NAME} width={48} height={48} className="mb-6 h-12 w-12 lg:hidden" />
               <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink sm:text-[2rem]">{title}</h1>
               <p className="mt-2 text-sm leading-relaxed text-ink-muted">{subtitle}</p>
             </div>
