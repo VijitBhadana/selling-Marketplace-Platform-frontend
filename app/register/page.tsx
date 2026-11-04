@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertCircle,
@@ -26,7 +26,14 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
-import { formatAadhaar, isValidAadhaar, isValidGstin, panProblem } from '@/lib/seller-kyc';
+import {
+  DEFAULT_TAX_ID_RULE,
+  formatAadhaar,
+  isValidAadhaar,
+  isValidGstin,
+  panProblem,
+  type SellerTaxIdRule,
+} from '@/lib/seller-kyc';
 import { VEHICLE_TYPES, isValidLicense, isValidVehicleNumber } from '@/lib/delivery';
 import { fileToResizedDataUrl } from '@/lib/image-utils';
 import { SITE_NAME } from '@/lib/site';
@@ -132,17 +139,37 @@ function PhotoField({
 
 type KycReason = { icon: LucideIcon; title: string; text: string };
 
-const sellerKycReasons: KycReason[] = [
+// The GST / PAN line follows the admin's sign-up rule.
+const taxIdReason: Record<SellerTaxIdRule, Pick<KycReason, 'title' | 'text'>> = {
+  EITHER: {
+    title: 'GST or PAN — verifies your business',
+    text: 'Keeps the marketplace tax-compliant and builds buyer trust. No GST? Your PAN works instead.',
+  },
+  GST_REQUIRED: {
+    title: 'GST — verifies your business',
+    text: 'Keeps the marketplace tax-compliant and builds buyer trust. Adding your PAN is optional.',
+  },
+  PAN_REQUIRED: {
+    title: 'PAN — verifies your business',
+    text: 'Keeps the marketplace tax-compliant and builds buyer trust. Adding your GST is optional.',
+  },
+  BOTH_REQUIRED: {
+    title: 'GST and PAN — verify your business',
+    text: 'Keeps the marketplace tax-compliant and builds buyer trust.',
+  },
+  BOTH_OPTIONAL: {
+    title: 'GST or PAN — optional',
+    text: 'Adding either one keeps the marketplace tax-compliant and builds buyer trust.',
+  },
+};
+
+const sellerKycReasons = (rule: SellerTaxIdRule): KycReason[] => [
   {
     icon: Fingerprint,
     title: 'Aadhaar — proves you are a real person',
     text: 'Stops fake seller accounts. Your full Aadhaar number is never stored — only a locked code and its last 4 digits.',
   },
-  {
-    icon: Receipt,
-    title: 'GST or PAN — verifies your business',
-    text: 'Keeps the marketplace tax-compliant and builds buyer trust. No GST? Your PAN works instead.',
-  },
+  { icon: Receipt, ...taxIdReason[rule] },
   {
     icon: Phone,
     title: 'Phone & email — reach you safely',
@@ -219,7 +246,15 @@ function KycError({ value, length, valid, message }: { value: string; length: nu
 }
 
 // The role lives in RegisterPage so the brand panel can show the seller / delivery KYC note.
-function RegisterForm({ role, setRole }: { role: Role; setRole: (role: Role) => void }) {
+function RegisterForm({
+  role,
+  setRole,
+  taxIdRule,
+}: {
+  role: Role;
+  setRole: (role: Role) => void;
+  taxIdRule: SellerTaxIdRule;
+}) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -241,6 +276,9 @@ function RegisterForm({ role, setRole }: { role: Role; setRole: (role: Role) => 
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next');
+  // Which of GST / PAN is mandatory right now. Under EITHER, filling one makes the other optional.
+  const gstRequired = taxIdRule === 'EITHER' ? !pan : taxIdRule === 'BOTH_REQUIRED' || taxIdRule === 'GST_REQUIRED';
+  const panRequired = taxIdRule === 'EITHER' ? !gstin : taxIdRule === 'BOTH_REQUIRED' || taxIdRule === 'PAN_REQUIRED';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -279,8 +317,16 @@ function RegisterForm({ role, setRole }: { role: Role; setRole: (role: Role) => 
         return;
       }
     }
-    if (isSeller && !gstin && !pan) {
+    if (isSeller && taxIdRule === 'EITHER' && !gstin && !pan) {
       setError("Please enter your GST number — or your PAN if you don't have GST.");
+      return;
+    }
+    if (isSeller && gstRequired && !gstin) {
+      setError('Please enter your GST number.');
+      return;
+    }
+    if (isSeller && panRequired && !pan) {
+      setError('Please enter your PAN number.');
       return;
     }
     if (isSeller && gstin && gstin.length !== 15) {
@@ -330,6 +376,73 @@ function RegisterForm({ role, setRole }: { role: Role; setRole: (role: Role) => 
       setLoading(false);
     }
   }
+
+  const gstField = (
+    <AuthField
+      id="register-gstin"
+      label={gstRequired ? 'GST number *' : 'GST number'}
+      hint={taxIdRule === 'EITHER' ? 'No GST? Add your PAN below' : gstRequired ? 'Required for sellers' : 'Optional'}
+      icon={Receipt}
+      after={
+        <KycError
+          value={gstin}
+          length={15}
+          valid={isValidGstin(gstin)}
+          message="This is not a valid GST number"
+        />
+      }
+    >
+      <input
+        id="register-gstin"
+        required={gstRequired}
+        autoComplete="off"
+        autoCapitalize="characters"
+        spellCheck={false}
+        maxLength={15}
+        value={gstin}
+        onChange={(e) => setGstin(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15))}
+        className={`${authInputClass} pl-11 pr-4 uppercase`}
+      />
+    </AuthField>
+  );
+
+  const panField = (
+    <AuthField
+      id="register-pan"
+      label={panRequired ? 'PAN number *' : 'PAN number'}
+      hint={
+        taxIdRule === 'EITHER'
+          ? gstin
+            ? 'Optional with GST'
+            : 'Required if you have no GST'
+          : panRequired
+            ? 'Required for sellers'
+            : 'Optional'
+      }
+      icon={IdCard}
+      after={
+        pan.length === 10 &&
+        panProblem(pan, name, gstin) && (
+          <p className="mt-2 flex items-start gap-1.5 text-xs text-accent">
+            <AlertCircle size={13} strokeWidth={2.5} className="mt-px shrink-0" /> {panProblem(pan, name, gstin)}
+          </p>
+        )
+      }
+    >
+      <input
+        id="register-pan"
+        required={panRequired}
+        autoComplete="off"
+        autoCapitalize="characters"
+        spellCheck={false}
+        maxLength={10}
+        value={pan}
+        onChange={(e) => setPan(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 10))}
+        placeholder="ABCPE1234F"
+        className={`${authInputClass} pl-11 pr-4 uppercase`}
+      />
+    </AuthField>
+  );
 
   return (
     <>
@@ -542,64 +655,19 @@ function RegisterForm({ role, setRole }: { role: Role; setRole: (role: Role) => 
           </>
         )}
 
-        {role === 'SELLER' && (
-          <>
-            <AuthField
-              id="register-gstin"
-              label={pan ? 'GST number' : 'GST number *'}
-              hint="No GST? Add your PAN below"
-              icon={Receipt}
-              after={
-                <KycError
-                  value={gstin}
-                  length={15}
-                  valid={isValidGstin(gstin)}
-                  message="This is not a valid GST number"
-                />
-              }
-            >
-              <input
-                id="register-gstin"
-                required={!pan}
-                autoComplete="off"
-                autoCapitalize="characters"
-                spellCheck={false}
-                maxLength={15}
-                value={gstin}
-                onChange={(e) => setGstin(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15))}
-                className={`${authInputClass} pl-11 pr-4 uppercase`}
-              />
-            </AuthField>
-
-            <AuthField
-              id="register-pan"
-              label={gstin ? 'PAN number' : 'PAN number *'}
-              hint={gstin ? 'Optional with GST' : 'Required if you have no GST'}
-              icon={IdCard}
-              after={
-                pan.length === 10 &&
-                panProblem(pan, name, gstin) && (
-                  <p className="mt-2 flex items-start gap-1.5 text-xs text-accent">
-                    <AlertCircle size={13} strokeWidth={2.5} className="mt-px shrink-0" /> {panProblem(pan, name, gstin)}
-                  </p>
-                )
-              }
-            >
-              <input
-                id="register-pan"
-                required={!gstin}
-                autoComplete="off"
-                autoCapitalize="characters"
-                spellCheck={false}
-                maxLength={10}
-                value={pan}
-                onChange={(e) => setPan(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 10))}
-                placeholder="ABCPE1234F"
-                className={`${authInputClass} pl-11 pr-4 uppercase`}
-              />
-            </AuthField>
-          </>
-        )}
+        {/* The required field comes first: with PAN required and GST optional, PAN goes on top. */}
+        {role === 'SELLER' &&
+          (taxIdRule === 'PAN_REQUIRED' ? (
+            <>
+              {panField}
+              {gstField}
+            </>
+          ) : (
+            <>
+              {gstField}
+              {panField}
+            </>
+          ))}
 
         <AuthField
           id="register-password"
@@ -663,6 +731,15 @@ function RegisterForm({ role, setRole }: { role: Role; setRole: (role: Role) => 
 
 export default function RegisterPage() {
   const [role, setRole] = useState<Role>('BUYER');
+  const [taxIdRule, setTaxIdRule] = useState<SellerTaxIdRule>(DEFAULT_TAX_ID_RULE);
+
+  useEffect(() => {
+    api.settings
+      .sellerKyc()
+      .then((s) => setTaxIdRule(s.taxIdRule))
+      .catch(() => {}); // the backend still enforces the rule on submit
+  }, []);
+
   return (
     <AuthShell
       panelTitle="Open your dukan on the cloude."
@@ -670,7 +747,7 @@ export default function RegisterPage() {
       panelExtra={
         role === 'SELLER' ? (
           <KycNote
-            reasons={sellerKycReasons}
+            reasons={sellerKycReasons(taxIdRule)}
             closing={`Your details stay completely secure with ${SITE_NAME}. We collect them only for security purposes, and they are never shared or leaked outside.`}
           />
         ) : role === 'DELIVERY' ? (
@@ -684,7 +761,7 @@ export default function RegisterPage() {
       subtitle="Buy, sell, and book across every Cloude."
     >
       <Suspense fallback={<AuthFormFallback fields={5} />}>
-        <RegisterForm role={role} setRole={setRole} />
+        <RegisterForm role={role} setRole={setRole} taxIdRule={taxIdRule} />
       </Suspense>
     </AuthShell>
   );

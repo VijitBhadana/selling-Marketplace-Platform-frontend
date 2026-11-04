@@ -2,7 +2,10 @@
 // a cookie (not just localStorage) so server-rendered pages — home, Cloude pages — can
 // filter by it too.
 
-export type UserLocation = { city: string; pincode?: string; lat?: number; lng?: number };
+import { apiFetch } from './api';
+
+/** `area` (a colony like "Ganga Nagar") is only shown; shops are matched by city and distance. */
+export type UserLocation = { city: string; area?: string; pincode?: string; lat?: number; lng?: number };
 
 export const LOCATION_COOKIE = 'dc_loc';
 // Older builds stored only the city under this name — still read so nobody loses theirs.
@@ -27,6 +30,7 @@ export function parseLocationCookie(raw: string | undefined, legacyCity?: string
       if (v && typeof v.city === 'string' && v.city.trim()) {
         return {
           city: v.city.trim(),
+          area: typeof v.area === 'string' && v.area.trim() ? v.area.trim() : undefined,
           pincode: typeof v.pincode === 'string' && v.pincode ? v.pincode : undefined,
           lat: Number.isFinite(v.lat) ? v.lat : undefined,
           lng: Number.isFinite(v.lng) ? v.lng : undefined,
@@ -235,44 +239,132 @@ export async function reverseGeocode(lat: number, lng: number): Promise<Nominati
   return (await res.json())?.address ?? {};
 }
 
-/** Browser geolocation → city + pincode. Rejects with a message the picker can show as-is. */
-export async function detectLocation(): Promise<UserLocation> {
+/**
+ * Readings vaguer than this (metres) aren't trusted as-is. Desktops without Wi-Fi only get an
+ * IP-based guess that can be 10–30 km off, so the visitor confirms the spot on a map instead.
+ */
+export const APPROX_METRES = 1000;
+
+export function isApproximate(coords: Pick<GeolocationCoordinates, 'accuracy'>) {
+  return coords.accuracy > APPROX_METRES;
+}
+
+/** The device's best position. Rejects with a message the picker can show as-is. */
+export async function detectCoords(fallback?: string): Promise<GeolocationCoordinates> {
   if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
-    throw new Error("Location isn't supported in this browser — type your city instead.");
+    throw new Error(`Location isn't supported in this browser — ${fallback ?? 'type your city instead'}.`);
   }
-  let coords: GeolocationCoordinates;
   try {
-    coords = await preciseCoords();
+    return await preciseCoords();
   } catch (err) {
-    throw new Error(locationErrorMessage(err as GeolocationPositionError));
+    throw new Error(locationErrorMessage(err as GeolocationPositionError, fallback));
   }
-  let addr: NominatimAddress;
+}
+
+export type Place = { city: string; area?: string; pincode?: string };
+
+/** "Ganga Nagar, Meerut", or just "Meerut" when the colony isn't known. */
+export function locationLabel(loc: { city: string; area?: string }) {
+  return loc.area ? `${loc.area}, ${loc.city}` : loc.city;
+}
+
+// The map asks for the label of every spot it rests on and Confirm asks again for the
+// same spot, so lookups are shared — each spot costs one Ola call at most.
+const places = new Map<string, Promise<Place | null>>();
+const OLA_TIMEOUT_MS = 6000;
+
+/**
+ * Coordinates → colony, city and pincode. Ola Maps (through our backend, which holds the
+ * key) names Indian colonies best; when it's unavailable, over its daily cap or slow,
+ * OpenStreetMap answers instead. Null when neither knows the city; rejects only when
+ * both lookups fail outright (offline).
+ */
+export function placeAt(lat: number, lng: number): Promise<Place | null> {
+  const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+  let place = places.get(key);
+  if (!place) {
+    place = lookupPlace(lat, lng);
+    places.set(key, place);
+    place.catch(() => places.delete(key));
+  }
+  return place;
+}
+
+async function lookupPlace(lat: number, lng: number): Promise<Place | null> {
   try {
-    addr = await reverseGeocode(coords.latitude, coords.longitude);
+    const ola = await Promise.race([
+      apiFetch<{ city: string | null; area: string | null; pincode: string | null }>(
+        `/geo/reverse?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}`,
+      ),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), OLA_TIMEOUT_MS)),
+    ]);
+    if (ola?.city) return { city: ola.city, area: ola.area || undefined, pincode: ola.pincode || undefined };
+  } catch {
+    // Ola not configured, over its cap, down or slow — OpenStreetMap below
+  }
+  const addr = await reverseGeocode(lat, lng);
+  const city = cityFrom(addr);
+  if (!city) return null;
+  const area = addr.suburb || addr.neighbourhood || addr.quarter || addr.residential;
+  return { city, area: area && area !== city ? area : undefined, pincode: cleanPincode(addr.postcode) };
+}
+
+/** Coordinates → colony, city + pincode. Rejects with a message the picker can show as-is. */
+export async function locationAt(lat: number, lng: number): Promise<UserLocation> {
+  let place: Place | null;
+  try {
+    place = await placeAt(lat, lng);
   } catch {
     throw new Error('Could not detect your location — type your city instead.');
   }
-  const city = cityFrom(addr);
-  if (!city) throw new Error('Could not work out your city — type it instead.');
-  return { city, pincode: cleanPincode(addr.postcode), lat: round(coords.latitude), lng: round(coords.longitude) };
+  if (!place) throw new Error('Could not work out your city — type it instead.');
+  return { ...place, lat: round(lat), lng: round(lng) };
 }
 
+/** Nominatim search, preferring results within ~40 km of `near` (same-named colonies exist in many cities). */
+async function searchNominatim(query: string, near?: { lat?: number; lng?: number } | null) {
+  const bias =
+    near?.lat != null && near.lng != null
+      ? `&viewbox=${near.lng - 0.4},${near.lat + 0.4},${near.lng + 0.4},${near.lat - 0.4}`
+      : '';
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&accept-language=en&countrycodes=in&addressdetails=1&limit=1${bias}&q=${encodeURIComponent(query)}`,
+  );
+  return (await res.json())?.[0] as
+    | { lat: string; lon: string; name?: string; addresstype?: string; address?: NominatimAddress }
+    | undefined;
+}
+
+/** A typed area/landmark → its coordinates (for jumping the map there), or null. */
+export async function searchPlace(query: string, near?: { lat: number; lng: number }): Promise<{ lat: number; lng: number } | null> {
+  const hit = await searchNominatim(query, near);
+  return hit ? { lat: Number(hit.lat), lng: Number(hit.lon) } : null;
+}
+
+const CITY_LEVEL = new Set(['city', 'town', 'village', 'municipality', 'county', 'state_district', 'district', 'state']);
+
 /**
- * A typed city or area → its coordinates, so nearby towns (~25 km) match too. Falls back
- * to the bare name when the lookup fails; the city match still works without coordinates.
+ * A typed city or area → its city, colony and coordinates, so nearby towns (~25 km) match
+ * too: "ganga nagar" becomes Ganga Nagar, Meerut. Falls back to the bare name when the
+ * lookup fails; the city match still works without coordinates.
  */
 export async function locateTypedCity(name: string): Promise<UserLocation> {
-  const city = name.trim();
+  const typed = name.trim();
   try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=jsonv2&accept-language=en&countrycodes=in&addressdetails=1&limit=1&q=${encodeURIComponent(city)}`,
-    );
-    const hit = (await res.json())?.[0];
+    const hit = await searchNominatim(typed, readLocation());
     if (hit) {
-      return { city, pincode: hit.address?.postcode || undefined, lat: round(Number(hit.lat)), lng: round(Number(hit.lon)) };
+      const city = (hit.address && cityFrom(hit.address)) || typed;
+      const area = hit.name && !CITY_LEVEL.has(hit.addresstype ?? '') && hit.name !== city ? hit.name : undefined;
+      return {
+        city,
+        area,
+        pincode: cleanPincode(hit.address?.postcode),
+        lat: round(Number(hit.lat)),
+        lng: round(Number(hit.lon)),
+      };
     }
   } catch {
-    // offline / rate-limited — the city name alone is still useful
+    // offline / rate-limited — the name alone is still useful
   }
-  return { city };
+  return { city: typed };
 }

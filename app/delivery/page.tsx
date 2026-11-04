@@ -22,7 +22,7 @@ import {
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { useVisibleInterval } from '@/lib/use-visible-interval';
-import { detectLocation, locateTypedCity } from '@/lib/user-location';
+import { detectCoords, isApproximate, locateTypedCity, locationAt, type UserLocation } from '@/lib/user-location';
 import {
   addressMapUrl,
   shopMapUrl,
@@ -30,6 +30,7 @@ import {
   type DeliveryOrder,
   type DeliveryProfile,
 } from '@/lib/delivery';
+import { MapPinDialog } from '@/components/map-pin-dialog';
 import { NotificationsMenu } from '@/components/notifications-menu';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Skeleton, SkeletonGroup } from '@/components/skeleton';
@@ -196,17 +197,30 @@ function LocationCard({
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState<'detect' | 'type' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // A detected reading waiting to be confirmed on the map.
+  const [pinAt, setPinAt] = useState<GeolocationCoordinates | null>(null);
 
-  async function save(find: () => Promise<{ city: string; pincode?: string; lat?: number; lng?: number }>, kind: 'detect' | 'type') {
+  async function persist(loc: UserLocation) {
+    // Nominatim sometimes returns "110001;110002" or a non-Indian code — keep only a clean 6-digit pincode.
+    const pincode = loc.pincode && /^\d{6}$/.test(loc.pincode) ? loc.pincode : undefined;
+    onSaved(await api.delivery.setLocation({ city: loc.city, pincode, lat: loc.lat, lng: loc.lng }, token));
+    setEditing(false);
+    setTyped('');
+    setPinAt(null);
+  }
+
+  /** Hands the detected reading to the map — browsers can be confidently wrong, so it's confirmed there. */
+  async function detect() {
+    setPinAt(await detectCoords());
+    return null;
+  }
+
+  async function save(find: () => Promise<UserLocation | null>, kind: 'detect' | 'type') {
     setBusy(kind);
     setError(null);
     try {
       const loc = await find();
-      // Nominatim sometimes returns "110001;110002" or a non-Indian code — keep only a clean 6-digit pincode.
-      const pincode = loc.pincode && /^\d{6}$/.test(loc.pincode) ? loc.pincode : undefined;
-      onSaved(await api.delivery.setLocation({ city: loc.city, pincode, lat: loc.lat, lng: loc.lng }, token));
-      setEditing(false);
-      setTyped('');
+      if (loc) await persist(loc);
     } catch (err) {
       setError(err instanceof ApiError || err instanceof Error ? err.message : 'Could not set your location.');
     } finally {
@@ -249,7 +263,7 @@ function LocationCard({
         <div className="mt-4 space-y-2">
           <button
             type="button"
-            onClick={() => save(detectLocation, 'detect')}
+            onClick={() => save(detect, 'detect')}
             disabled={!!busy}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-brand-ink transition-opacity hover:opacity-90 disabled:opacity-60"
           >
@@ -285,6 +299,15 @@ function LocationCard({
           )}
           {error && <p className="text-xs text-accent">{error}</p>}
         </div>
+      )}
+
+      {pinAt && (
+        <MapPinDialog
+          start={{ lat: pinAt.latitude, lng: pinAt.longitude }}
+          accuracy={isApproximate(pinAt) ? pinAt.accuracy : undefined}
+          onConfirm={async ({ lat, lng }) => persist(await locationAt(lat, lng))}
+          onClose={() => setPinAt(null)}
+        />
       )}
     </section>
   );

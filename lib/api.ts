@@ -2,6 +2,7 @@
 // Set NEXT_PUBLIC_API_URL in .env.local (see .env.local.example).
 
 import type { DeliveryOrder, DeliveryProfile } from './delivery';
+import type { SellerTaxIdRule } from './seller-kyc';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
 
@@ -342,6 +343,7 @@ export const api = {
   },
   settings: {
     theme: () => apiFetch<{ brandColor: string | null; glow: 'VIVID' | 'SUBTLE' | 'MINIMAL' }>('/settings/theme'),
+    sellerKyc: () => apiFetch<{ taxIdRule: SellerTaxIdRule }>('/settings/seller-kyc'),
   },
   advertisements: {
     /** Running ads this buyer / seller hasn't closed yet. */
@@ -407,5 +409,7 @@ export const api = {
         '/admin/theme',
         { method: 'PUT', body, token },
       ),
+    updateSellerKyc: (taxIdRule: SellerTaxIdRule, token: string) =>
+      apiFetch<{ taxIdRule: SellerTaxIdRule }>('/admin/seller-kyc', { method: 'PUT', body: { taxIdRule }, token }),
   },
 };

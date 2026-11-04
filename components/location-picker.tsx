@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Check, ChevronDown, Crosshair, Loader2, MapPin, X } from 'lucide-react';
 import {
   LOCATION_CHANGE_EVENT,
-  detectLocation,
+  detectCoords,
+  isApproximate,
   locateTypedCity,
+  locationAt,
+  locationLabel,
   locationWasCleared,
   readLocation,
   saveLocation,
@@ -14,9 +17,22 @@ import {
   watchLocationAccess,
   type UserLocation,
 } from '@/lib/user-location';
+import { MapPinDialog } from './map-pin-dialog';
 
 // Both the desktop and mobile pickers mount at once; only one may ask for permission.
 let autoDetecting = false;
+const MAP_PROMPTED_KEY = 'dc_map_prompted';
+
+/** True the first time in this tab — a silent detection opens the map by itself only once. */
+function shouldAutoOpenMap() {
+  try {
+    if (sessionStorage.getItem(MAP_PROMPTED_KEY)) return false;
+    sessionStorage.setItem(MAP_PROMPTED_KEY, '1');
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Location button in the navbar search. Shows the visitor's city; clicking it lets them
@@ -26,16 +42,20 @@ let autoDetecting = false;
  */
 export const LocationPicker = memo(function LocationPicker({ variant }: { variant: 'desktop' | 'mobile' | 'header' }) {
   const router = useRouter();
+  // "Ganga Nagar, Meerut" — or just the city when the colony isn't known.
   const [city, setCity] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [typed, setTyped] = useState('');
+  // A detected reading waiting to be confirmed on the map.
+  const [pinAt, setPinAt] = useState<GeolocationCoordinates | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   function apply(next: UserLocation | null) {
     saveLocation(next);
     setOpen(false);
+    setPinAt(null);
     setError(null);
     router.refresh();
   }
@@ -44,7 +64,18 @@ export const LocationPicker = memo(function LocationPicker({ variant }: { varian
     setDetecting(true);
     setError(null);
     try {
-      apply(await detectLocation());
+      const coords = await detectCoords();
+      // Asked for: always confirmed on the map, since browsers can be confidently wrong.
+      // Automatic: a good reading is saved straight away, and a rough one (may be the
+      // wrong town) opens the map once per tab rather than being saved.
+      if (!silent || isApproximate(coords)) {
+        if (!silent || shouldAutoOpenMap()) {
+          setOpen(false);
+          setPinAt(coords);
+        }
+        return;
+      }
+      apply(await locationAt(coords.latitude, coords.longitude));
     } catch (e) {
       if (!silent) setError((e as Error).message);
     } finally {
@@ -53,8 +84,12 @@ export const LocationPicker = memo(function LocationPicker({ variant }: { varian
   }
 
   useEffect(() => {
-    setCity(readLocation()?.city ?? null);
-    const onChange = (e: Event) => setCity((e as CustomEvent<UserLocation | null>).detail?.city ?? null);
+    const initial = readLocation();
+    setCity(initial ? locationLabel(initial) : null);
+    const onChange = (e: Event) => {
+      const loc = (e as CustomEvent<UserLocation | null>).detail;
+      setCity(loc ? locationLabel(loc) : null);
+    };
     window.addEventListener(LOCATION_CHANGE_EVENT, onChange);
 
     // Never over a location the visitor chose, nor after they cleared it for "all cities".
@@ -119,7 +154,7 @@ export const LocationPicker = memo(function LocationPicker({ variant }: { varian
         title={city ? `Showing shops in ${city}` : 'Set your location'}
         className={
           isDesktop
-            ? 'flex h-9 max-w-[9.5rem] items-center gap-1.5 rounded-xl px-2 text-sm font-medium text-ink transition-colors hover:bg-surface lg:max-w-[11rem]'
+            ? 'flex h-9 max-w-[9.5rem] items-center gap-1.5 rounded-xl px-2 text-sm font-medium text-ink transition-colors hover:bg-surface lg:max-w-[13rem] xl:max-w-[15rem]'
             : isHeader
               ? 'mt-1 flex max-w-full items-center gap-1 text-[11px] font-medium leading-none text-ink-muted transition-colors hover:text-ink'
               : 'flex h-11 w-full items-center gap-2 rounded-full border border-border bg-bg px-4 text-sm font-medium text-ink'
@@ -205,6 +240,15 @@ export const LocationPicker = memo(function LocationPicker({ variant }: { varian
             </button>
           )}
         </div>
+      )}
+
+      {pinAt && (
+        <MapPinDialog
+          start={{ lat: pinAt.latitude, lng: pinAt.longitude }}
+          accuracy={isApproximate(pinAt) ? pinAt.accuracy : undefined}
+          onConfirm={async ({ lat, lng }) => apply(await locationAt(lat, lng))}
+          onClose={() => setPinAt(null)}
+        />
       )}
     </div>
   );

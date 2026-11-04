@@ -8,6 +8,7 @@ import {
   ArrowUpRight,
   CreditCard,
   ExternalLink,
+  Fingerprint,
   Layers,
   LayoutDashboard,
   LogOut,
@@ -37,6 +38,9 @@ const SubscriptionsSection = dynamic(
   { loading: tabLoading },
 );
 const ThemeSection = dynamic(() => import('@/components/admin/theme-section').then((m) => m.ThemeSection), { loading: tabLoading });
+const SellerKycSection = dynamic(() => import('@/components/admin/seller-kyc-section').then((m) => m.SellerKycSection), {
+  loading: tabLoading,
+});
 const CloudesSection = dynamic(() => import('@/components/admin/cloudes-section').then((m) => m.CloudesSection), { loading: tabLoading });
 const UserDetailDrawer = dynamic(() => import('@/components/admin/user-detail-drawer').then((m) => m.UserDetailDrawer));
 const AnnouncementDialog = dynamic(() => import('@/components/admin/announcement-dialog').then((m) => m.AnnouncementDialog));
@@ -47,6 +51,7 @@ const TABS = [
   { id: 'users', label: 'Users', icon: Users },
   { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
   { id: 'cloudes', label: 'Cloudes', icon: Layers },
+  { id: 'seller-kyc', label: 'Seller KYC', icon: Fingerprint },
   { id: 'theme', label: 'Theme Settings', icon: Palette },
 ] as const;
 
@@ -59,6 +64,7 @@ const QUICK_ACTIONS = [
   { id: 'users', label: 'Manage users', icon: Users },
   { id: 'subscriptions', label: 'Review subscriptions', icon: CreditCard },
   { id: 'cloudes', label: 'Manage Cloudes', icon: Layers },
+  { id: 'seller-kyc', label: 'Seller GST / PAN rule', icon: Fingerprint },
   { id: 'theme', label: 'Change brand colour', icon: Palette },
 ] as const;
 
@@ -362,6 +368,7 @@ function AdminPanel() {
           )}
           {tab === 'subscriptions' && <SubscriptionsSection onOpenUser={setOpenUserId} />}
           {tab === 'cloudes' && <CloudesSection />}
+          {tab === 'seller-kyc' && <SellerKycSection />}
           {tab === 'theme' && <ThemeSection />}
         </main>
       </div>

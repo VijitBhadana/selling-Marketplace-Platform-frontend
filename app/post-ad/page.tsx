@@ -46,7 +46,8 @@ import {
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { fileToResizedDataUrl, withImageParams } from '@/lib/image-utils';
-import { cleanPincode, locationErrorMessage, preciseCoords, reverseGeocode } from '@/lib/user-location';
+import { isApproximate, locationErrorMessage, placeAt, preciseCoords } from '@/lib/user-location';
+import { MapPinDialog } from '@/components/map-pin-dialog';
 import { certificateToDataUrl, shopCertificateFor } from '@/lib/shop-certificate';
 import { CertificateUpload } from '@/components/certificate-upload';
 import { Skeleton, SkeletonGroup } from '@/components/skeleton';
@@ -117,6 +118,8 @@ function PostAdForm() {
   // the city is typed over, since the coordinates would then point somewhere else.
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locating, setLocating] = useState(false);
+  // A detected reading the seller confirms on the map before it's used.
+  const [pinAt, setPinAt] = useState<GeolocationCoordinates | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -133,7 +136,8 @@ function PostAdForm() {
 
   // Uses the browser's native geolocation permission prompt (the same "Allow
   // location access?" dialog phones/laptops show) then reverse-geocodes the
-  // coordinates to a city + pincode and fills them in immediately.
+  // coordinates to a city + pincode. The spot is always confirmed on a map first —
+  // every buyer's distance to the shop comes from it, and browsers can be kilometres off.
   function useCurrentLocation() {
     if (!('geolocation' in navigator)) {
       setLocationError('Location isn\'t supported in this browser — enter your city manually.');
@@ -143,27 +147,31 @@ function PostAdForm() {
     setLocating(true);
 
     preciseCoords().then(
-      async ({ latitude, longitude }) => {
-        try {
-          const addr = await reverseGeocode(latitude, longitude);
-          const detectedCity: string = addr.city || addr.town || addr.municipality || addr.village || addr.suburb || addr.county || '';
-          const detectedPincode: string = cleanPincode(addr.postcode) ?? '';
-
-          if (detectedCity) setCity(detectedCity);
-          if (detectedPincode) setPincode(detectedPincode);
-          if (detectedCity) setCoords({ latitude, longitude });
-          if (!detectedCity) setLocationError('Could not determine your city from your location — please enter it manually.');
-        } catch {
-          setLocationError('Could not detect your location — please enter it manually.');
-        } finally {
-          setLocating(false);
-        }
+      (c) => {
+        setLocating(false);
+        setPinAt(c);
       },
       (err) => {
         setLocating(false);
         setLocationError(locationErrorMessage(err, 'enter your city manually'));
       },
     );
+  }
+
+  async function fillLocation(latitude: number, longitude: number) {
+    let place;
+    try {
+      place = await placeAt(latitude, longitude);
+    } catch {
+      throw new Error('Could not detect your location — please enter it manually.');
+    }
+    if (!place) {
+      setLocationError('Could not determine your city from your location — please enter it manually.');
+      return;
+    }
+    setCity(place.city);
+    if (place.pincode) setPincode(place.pincode);
+    setCoords({ latitude, longitude });
   }
 
   function handleFilesSelected(fileList: FileList | null) {
@@ -951,6 +959,17 @@ function PostAdForm() {
                     <p className="mt-3 flex items-start gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-medium text-accent">
                       <AlertCircle size={14} className="mt-px shrink-0" /> {locationError}
                     </p>
+                  )}
+                  {pinAt && (
+                    <MapPinDialog
+                      start={{ lat: pinAt.latitude, lng: pinAt.longitude }}
+                      accuracy={isApproximate(pinAt) ? pinAt.accuracy : undefined}
+                      onConfirm={async ({ lat, lng }) => {
+                        await fillLocation(lat, lng);
+                        setPinAt(null);
+                      }}
+                      onClose={() => setPinAt(null)}
+                    />
                   )}
                 </div>
 

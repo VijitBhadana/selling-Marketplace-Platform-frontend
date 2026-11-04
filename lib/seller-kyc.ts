@@ -74,3 +74,8 @@ export function panProblem(pan: string, name: string, gstin: string) {
   }
   return null;
 }
+
+/** Which of GST / PAN the admin makes sellers give at sign-up (Aadhaar is always required). */
+export type SellerTaxIdRule = 'EITHER' | 'BOTH_OPTIONAL' | 'BOTH_REQUIRED' | 'GST_REQUIRED' | 'PAN_REQUIRED';
+
+export const DEFAULT_TAX_ID_RULE: SellerTaxIdRule = 'EITHER';
