@@ -297,6 +297,10 @@ export const api = {
     verifyOtp: (email: string, otp: string) =>
       apiFetch('/auth/verify-otp', { method: 'POST', body: { email, otp } }),
     resendOtp: (email: string) => apiFetch('/auth/resend-otp', { method: 'POST', body: { email } }),
+    forgotPassword: (email: string) =>
+      apiFetch<{ message: string }>('/auth/forgot-password', { method: 'POST', body: { email } }),
+    resetPassword: (email: string, otp: string, newPassword: string) =>
+      apiFetch<{ message: string }>('/auth/reset-password', { method: 'POST', body: { email, otp, newPassword } }),
   },
   cart: {
     list: (token: string) => apiFetch('/cart', { token }),

@@ -124,6 +124,15 @@ export function AuthModal() {
               placeholder="••••••••"
               className="w-full rounded-lg border border-border bg-bg px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted/70 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
             />
+            <div className="mt-1.5 flex justify-end">
+              <Link
+                href={email.trim() ? `/forgot-password?email=${encodeURIComponent(email.trim())}` : '/forgot-password'}
+                onClick={hideAuthModal}
+                className="text-[12px] font-medium text-brand hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           {error && (

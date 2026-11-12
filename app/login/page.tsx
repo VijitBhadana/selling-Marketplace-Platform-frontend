@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -17,16 +18,24 @@ import {
 import { startTopLoader } from '@/components/top-loader';
 
 function LoginForm() {
-  const [email, setEmail] = useState('');
+  const searchParams = useSearchParams();
+  // Coming back from /forgot-password: the email is filled in for them.
+  const [email, setEmail] = useState(searchParams.get('email') ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const justRegistered = searchParams.get('registered') === '1';
+  const justReset = searchParams.get('reset') === '1';
   const next = searchParams.get('next');
+
+  const forgotParams = new URLSearchParams();
+  if (email.trim()) forgotParams.set('email', email.trim());
+  if (next) forgotParams.set('next', next);
+  const forgotQuery = forgotParams.toString();
+  const forgotHref = forgotQuery ? `/forgot-password?${forgotQuery}` : '/forgot-password';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,6 +68,11 @@ function LoginForm() {
           <Sparkles size={16} className="shrink-0" /> Account created — log in to get started.
         </p>
       )}
+      {justReset && (
+        <p className="mb-6 flex items-center gap-2.5 rounded-xl border border-brand/25 bg-brand-soft px-4 py-3 text-sm font-medium text-brand">
+          <Sparkles size={16} className="shrink-0" /> Password updated — log in with your new password.
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <AuthField id="login-email" label="Email" icon={Mail}>
@@ -74,7 +88,18 @@ function LoginForm() {
           />
         </AuthField>
 
-        <AuthField id="login-password" label="Password" icon={Lock}>
+        <AuthField
+          id="login-password"
+          label="Password"
+          icon={Lock}
+          after={
+            <div className="mt-2 flex justify-end">
+              <Link href={forgotHref} className="text-[13px] font-medium text-brand hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+          }
+        >
           <input
             id="login-password"
             type={showPassword ? 'text' : 'password'}
