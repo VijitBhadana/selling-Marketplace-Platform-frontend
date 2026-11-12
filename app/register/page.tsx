@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   AlertCircle,
@@ -23,6 +24,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   User,
+  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { api, ApiError } from '@/lib/api';
@@ -232,6 +234,62 @@ function KycNote({ reasons, closing }: { reasons: KycReason[]; closing: string }
       </ul>
       <p className="mt-4 border-t border-white/10 pt-3.5 text-xs leading-snug text-white/70">{closing}</p>
     </div>
+  );
+}
+
+/** Small popup on picking "Seller": no GST / PAN yet is fine — Aadhaar is enough to start. */
+function SellerTaxIdNotice({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // Portalled to <body>: the auth card's fade-in transform would otherwise trap `fixed`.
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-ink/50 p-4 backdrop-blur-sm sm:items-center"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="seller-taxid-title"
+        className="relative w-full max-w-sm rounded-2xl border border-border bg-surface p-6 shadow-card animate-fade-in-up"
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
+        >
+          <X size={18} />
+        </button>
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-soft text-brand">
+          <Receipt size={20} />
+        </span>
+        <h2 id="seller-taxid-title" className="mt-4 font-display text-lg font-bold text-ink">
+          Don&apos;t have GST or PAN?
+        </h2>
+        <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
+          No problem — you can create your seller account with just your{' '}
+          <span className="font-semibold text-ink">Aadhaar card</span> and start selling right away.
+        </p>
+        <p className="mt-3 flex gap-2 rounded-lg bg-brand-soft/60 px-3 py-2 text-xs leading-relaxed text-ink-muted">
+          <ShieldCheck size={14} className="mt-px shrink-0 text-brand" />
+          Later on, we will ask for your GST and PAN details for security and verification purposes.
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          autoFocus
+          className="mt-5 flex h-10 w-full items-center justify-center rounded-xl bg-brand text-sm font-semibold text-brand-ink transition-colors hover:bg-brand/90"
+        >
+          Got it, continue
+        </button>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -732,6 +790,17 @@ function RegisterForm({
 export default function RegisterPage() {
   const [role, setRole] = useState<Role>('BUYER');
   const [taxIdRule, setTaxIdRule] = useState<SellerTaxIdRule>(DEFAULT_TAX_ID_RULE);
+  // The "no GST / PAN? no issue" popup — once per visit, and only while both are optional.
+  const [showSellerNotice, setShowSellerNotice] = useState(false);
+  const [sellerNoticeSeen, setSellerNoticeSeen] = useState(false);
+
+  function pickRole(next: Role) {
+    setRole(next);
+    if (next === 'SELLER' && taxIdRule === 'BOTH_OPTIONAL' && !sellerNoticeSeen) {
+      setSellerNoticeSeen(true);
+      setShowSellerNotice(true);
+    }
+  }
 
   useEffect(() => {
     api.settings
@@ -761,8 +830,9 @@ export default function RegisterPage() {
       subtitle="Buy, sell, and book across every Cloude."
     >
       <Suspense fallback={<AuthFormFallback fields={5} />}>
-        <RegisterForm role={role} setRole={setRole} taxIdRule={taxIdRule} />
+        <RegisterForm role={role} setRole={pickRole} taxIdRule={taxIdRule} />
       </Suspense>
+      {showSellerNotice && <SellerTaxIdNotice onClose={() => setShowSellerNotice(false)} />}
     </AuthShell>
   );
 }
