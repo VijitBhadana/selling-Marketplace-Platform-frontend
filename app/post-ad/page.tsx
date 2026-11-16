@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Hash,
   ImagePlus,
+  Landmark,
   Lightbulb,
   Loader2,
   LocateFixed,
@@ -114,6 +115,11 @@ function PostAdForm() {
   const [certificateNumber, setCertificateNumber] = useState('');
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');
+  // Shop address the seller types — "Use current location" never fills these. The detected
+  // colony only shows up in the placeholder as a hint.
+  const [addressLine, setAddressLine] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [detectedArea, setDetectedArea] = useState<string | null>(null);
   // From "Use current location" only — lets buyers ~25 km away find the shop. Cleared when
   // the city is typed over, since the coordinates would then point somewhere else.
   const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -171,6 +177,7 @@ function PostAdForm() {
     }
     setCity(place.city);
     if (place.pincode) setPincode(place.pincode);
+    setDetectedArea(place.area ?? null);
     setCoords({ latitude, longitude });
   }
 
@@ -237,10 +244,11 @@ function PostAdForm() {
       case 1: return isJobPost ? isJobDetailsValid(jobDraft) : title.trim().length > 0 && description.trim().length > 0;
       // Photos are optional for services per spec; the certificate isn't, where one is needed.
       case 2: return isJobPost ? isJobSkillsValid(jobDraft) : !certificate || !!certificateFile;
-      case 3: return city.trim().length > 0;
+      // Shops also need the street address; job posts only ask for the city.
+      case 3: return city.trim().length > 0 && (isJobPost || addressLine.trim().length > 0);
       default: return true;
     }
-  }, [step, categorySlug, title, description, city, isJobPost, canPostJobs, jobDraft, certificate, certificateFile]);
+  }, [step, categorySlug, title, description, city, addressLine, isJobPost, canPostJobs, jobDraft, certificate, certificateFile]);
 
   useEffect(() => {
     if (!loading && !user) requireAuth(undefined, 'post-ad');
@@ -358,6 +366,8 @@ function PostAdForm() {
           priceType: 'CONTACT_FOR_PRICE',
           city: city.trim(),
           pincode: pincode.trim() || undefined,
+          addressLine: addressLine.trim() || undefined,
+          landmark: landmark.trim() || undefined,
           ...(coords ?? {}),
           images: [image],
           ...(certificateImage
@@ -397,7 +407,7 @@ function PostAdForm() {
       case 0: return !categorySlug ? 'Pick a category to continue' : 'A seller account is needed to post jobs';
       case 1: return 'Fill in the required fields to continue';
       case 2: return isJobPost ? 'Add at least one skill and the responsibilities' : 'Upload the certificate to continue';
-      case 3: return 'Enter your city to continue';
+      case 3: return !city.trim() ? 'Enter your city to continue' : 'Enter your area / block / street to continue';
       default: return null;
     }
   })();
@@ -1012,6 +1022,42 @@ function PostAdForm() {
                       />
                     </div>
                   </div>
+                  {!isJobPost && (
+                    <>
+                      <div className="sm:col-span-2">
+                        <label htmlFor="addressLine" className="mb-2 block text-sm font-semibold text-ink">
+                          Area / Block / Street <span className="text-accent">*</span>
+                        </label>
+                        <div className="relative">
+                          <MapPin size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted" />
+                          <input
+                            id="addressLine"
+                            value={addressLine}
+                            onChange={(e) => setAddressLine(e.target.value)}
+                            maxLength={200}
+                            placeholder={`e.g. Shop 12, B-Block, ${detectedArea ?? 'Main Market Road'}`}
+                            className={`${inputClass} pl-10`}
+                          />
+                        </div>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label htmlFor="landmark" className="mb-2 block text-sm font-semibold text-ink">
+                          Landmark <span className="font-normal text-ink-muted">(optional)</span>
+                        </label>
+                        <div className="relative">
+                          <Landmark size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted" />
+                          <input
+                            id="landmark"
+                            value={landmark}
+                            onChange={(e) => setLandmark(e.target.value)}
+                            maxLength={120}
+                            placeholder="e.g. Near Shiv Mandir"
+                            className={`${inputClass} pl-10`}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -1069,6 +1115,12 @@ function PostAdForm() {
                           ['Title', title],
                           ['Photos', `${photos.length} uploaded`],
                           ...(certificate ? [[certificate.title, certificateFile ? 'Uploaded' : 'Missing — go back to Photos']] : []),
+                        ]),
+                    ...(isJobPost
+                      ? []
+                      : [
+                          ['Address', addressLine.trim() || '—'],
+                          ...(landmark.trim() ? [['Landmark', landmark.trim()]] : []),
                         ]),
                     ['Location', `${city}${pincode ? `, ${pincode}` : ''}`],
                   ].map(([k, v]) => (
